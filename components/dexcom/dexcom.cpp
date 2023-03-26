@@ -44,7 +44,6 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       this->handle_authentication_desc_ = this->find_descriptor(handle_authentication_);
       this->handle_backfill_ = this->find_handle_(&CHARACTERISTIC_UUID_BACKFILL);
 
-      this->read_handle_(this->handle_control_);
       this->read_handle_(this->handle_authentication_);
 
       this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
@@ -66,12 +65,12 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       }
       if (param->read.status == ESP_GATT_OK) {
         this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
-        ESP_LOGV(TAG, "[%s] Reading char at handle %d, status=%d, data=%s", this->get_name().c_str(),
+        ESP_LOGV(TAG, "[%s] Reading char at handle 0x%04x, status=%d, data=%s", this->get_name().c_str(),
                  param->read.handle, param->read.status,
                  format_hex_pretty(param->read.value, param->read.value_len).c_str());
       } else {
-        ESP_LOGW(TAG, "[%s] Error reading char at handle %d, status=%d", this->get_name().c_str(), param->read.handle,
-                 param->read.status);
+        ESP_LOGW(TAG, "[%s] Error reading char at handle 0x%04x, status=%d", this->get_name().c_str(),
+                 param->read.handle, param->read.status);
         break;
       }
       this->read_incomming_msg_(param->read.handle, param->read.value, param->read.value_len);
@@ -146,26 +145,23 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u
 
               response.opcode = DEXCOM_OPCODE::BOND_REQUEST;
               this->write_handle_(handle, (u_int8_t *) &response, 1);
+            } else {
+              response.opcode = DEXCOM_OPCODE::AUTH_INIT;
+              response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
+              response.init_msg.channel = this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL
+                                                                            : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
+              this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
             }
 
             response.opcode = DEXCOM_OPCODE::TIME;
             response.time.unknown_E6 = 0xE6;
             response.time.unknown_64 = 0x64;
-            this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(TIME_MSG));
+            this->write_handle_(this->handle_control_, (u_int8_t *) &response, 1 + sizeof(TIME_MSG));
           }
         }
         break;
 
       default:
-        // start process
-        this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
-                               BT_NOTIFICATION_TYPE::NOTIFICATION_INDICATION);
-
-        response.opcode = DEXCOM_OPCODE::AUTH_INIT;
-        response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
-        response.init_msg.channel =
-            this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
-        this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
         break;
     }
   } else if (handle == this->handle_control_) {
