@@ -50,12 +50,14 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
                              BT_NOTIFICATION_TYPE::NOTIFICATION_INDICATION);
 
-      response.opcode = DEXCOM_OPCODE::AUTH_INIT;
-      response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
-      response.init_msg.channel =
-          this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
-      this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
-
+      {
+        DEXCOM_MSG response;
+        response.opcode = DEXCOM_OPCODE::AUTH_INIT;
+        response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
+        response.init_msg.channel =
+            this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
+        this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
+      }
       break;
 
     case ESP_GATTC_READ_CHAR_EVT:
@@ -140,7 +142,7 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u
               // Request bonding
               response.opcode = DEXCOM_OPCODE::KEEP_ALIVE;
               response.keep_alive.unknown = 0x19;
-              this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(KEEP_ALIVE));
+              this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(KEEP_ALIVE_MSG));
 
               response.opcode = DEXCOM_OPCODE::BOND_REQUEST;
               this->write_handle_(handle, (u_int8_t *) &response, 1);
@@ -179,9 +181,9 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u
           ESP_LOGI(TAG, "Time - since session start: %d", dexcom_msg->time_response.sessionStartTime);
 
           if (dexcom_msg->time_response.status == 0x81)
-            ESP_LOGI(DEBUG, "WARNING - Low Battery");
+            ESP_LOGI(TAG, "WARNING - Low Battery");
           if (dexcom_msg->time_response.status == 0x83)
-            ESP_LOGI(DEBUG, "WARNING - Transmitter Expired");
+            ESP_LOGI(TAG, "WARNING - Transmitter Expired");
         }
         break;
       default:

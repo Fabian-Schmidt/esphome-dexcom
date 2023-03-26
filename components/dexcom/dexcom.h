@@ -103,7 +103,7 @@ struct TIME_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-al
 
 struct TIME_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
   u_int8_t status;
-  u_int32_t currentTime
+  u_int32_t currentTime;
   // Session start = Activation date + sessionStartTime * 1000
   u_int32_t sessionStartTime;
 } __attribute__((packed));
