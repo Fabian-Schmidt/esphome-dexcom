@@ -44,7 +44,17 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       this->handle_authentication_desc_ = this->find_descriptor(handle_authentication_);
       this->handle_backfill_ = this->find_handle_(&CHARACTERISTIC_UUID_BACKFILL);
 
+      this->read_handle_(this->handle_control_);
       this->read_handle_(this->handle_authentication_);
+
+      this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
+                             BT_NOTIFICATION_TYPE::NOTIFICATION_INDICATION);
+
+      response.opcode = DEXCOM_OPCODE::AUTH_INIT;
+      response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
+      response.init_msg.channel =
+          this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
+      this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
 
       break;
 
@@ -88,9 +98,9 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       if (param->write.status == ESP_GATT_OK) {
         ESP_LOGV(TAG, "[%s] Write to handle 0x%04x status=%d", this->get_name().c_str(), param->write.handle,
                  param->write.status);
-        if (param->write.handle == this->handle_authentication_) {
-          this->read_handle_(this->handle_authentication_);
-        }
+        // if (param->write.handle == this->handle_authentication_) {
+        this->read_handle_(param->write.handle);
+        //}
       } else {
         // status 0x05 - ESP_GATT_INSUF_AUTHENTICATION
         ESP_LOGW(TAG, "[%s] Write to handle 0x%04x status=%d", this->get_name().c_str(), param->write.handle,
@@ -106,6 +116,7 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
 }
 void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u_int16_t value_len) {
   auto dexcom_msg = (const DEXCOM_MSG *) value;
+  DEXCOM_MSG response;
 
   if (handle == this->handle_authentication_) {
     switch (dexcom_msg->opcode) {
@@ -115,7 +126,6 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u
           // [8]); To check if the Transmitter is a valid dexcom transmitter (because only the correct one should
           // know the ID).
 
-          DEXCOM_MSG response;
           response.opcode = DEXCOM_OPCODE::AUTH_CHALLENGE_RESPONSE;
           response.challenge_response_msg.challenge_response = this->encrypt_(dexcom_msg->challenge_msg.challenge);
           this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(AUTH_CHALLENGE_RESPONSE_MSG));
@@ -128,7 +138,6 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u
           if (dexcom_msg->auth_finish_msg.auth == DEXCOM_AUTH_RESULT::AUTHENTICATED) {
             if (dexcom_msg->auth_finish_msg.bond != DEXCOM_BOND_REQUEST::NO_BONDING) {
               // Request bonding
-              DEXCOM_MSG response;
               response.opcode = DEXCOM_OPCODE::KEEP_ALIVE;
               response.keep_alive.unknown = 0x19;
               this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(KEEP_ALIVE));
@@ -136,6 +145,11 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u
               response.opcode = DEXCOM_OPCODE::BOND_REQUEST;
               this->write_handle_(handle, (u_int8_t *) &response, 1);
             }
+
+            response.opcode = DEXCOM_OPCODE::TIME;
+            response.time.unknown_E6 = 0xE6;
+            response.time.unknown_64 = 0x64;
+            this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(TIME_MSG));
           }
         }
         break;
@@ -145,12 +159,32 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, uint8_t *value, const u
         this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
                                BT_NOTIFICATION_TYPE::NOTIFICATION_INDICATION);
 
-        DEXCOM_MSG response;
         response.opcode = DEXCOM_OPCODE::AUTH_INIT;
         response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
         response.init_msg.channel =
             this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
         this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
+        break;
+    }
+  } else if (handle == this->handle_control_) {
+    switch (dexcom_msg->opcode) {
+      case DEXCOM_OPCODE::TIME_RESPONSE:
+        if (value_len >= (1 + sizeof(TIME_RESPONSE_MSG))) {
+          ESP_LOGI(TAG, "Time - Status:              %d", dexcom_msg->time_response.status);
+
+          ESP_LOGI(TAG, "Time - since activation:    %d (%d days, %d hours)\n",
+                   dexcom_msg->time_response.currentTime,  // Activation date is now() - currentTime * 1000
+                   dexcom_msg->time_response.currentTime / (60 * 60 * 24),     // Days round down
+                   (dexcom_msg->time_response.currentTime / (60 * 60)) % 24);  // Remaining hours
+          ESP_LOGI(TAG, "Time - since session start: %d", dexcom_msg->time_response.sessionStartTime);
+
+          if (dexcom_msg->time_response.status == 0x81)
+            ESP_LOGI(DEBUG, "WARNING - Low Battery");
+          if (dexcom_msg->time_response.status == 0x83)
+            ESP_LOGI(DEBUG, "WARNING - Transmitter Expired");
+        }
+        break;
+      default:
         break;
     }
   }

@@ -92,8 +92,20 @@ struct AUTH_FINISH_MSG {  // NOLINT(readability-identifier-naming,altera-struct-
   DEXCOM_BOND_REQUEST bond;
 } __attribute__((packed));
 
-struct KEEP_ALIVE {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
-  u_int8_t unknown;  // 0x19
+struct KEEP_ALIVE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
+  u_int8_t unknown;      // 0x19
+} __attribute__((packed));
+
+struct TIME_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
+  u_int8_t unknown_E6;
+  u_int8_t unknown_64;
+} __attribute__((packed));
+
+struct TIME_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
+  u_int8_t status;
+  u_int32_t currentTime
+  // Session start = Activation date + sessionStartTime * 1000
+  u_int32_t sessionStartTime;
 } __attribute__((packed));
 
 struct DEXCOM_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
@@ -103,7 +115,9 @@ struct DEXCOM_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-
     AUTH_CHALLENGE_MSG challenge_msg;
     AUTH_CHALLENGE_RESPONSE_MSG challenge_response_msg;
     AUTH_FINISH_MSG auth_finish_msg;
-    KEEP_ALIVE keep_alive;
+    KEEP_ALIVE_MSG keep_alive;
+    TIME_MSG time;
+    TIME_RESPONSE_MSG time_response;
   };
 } __attribute__((packed));
 
