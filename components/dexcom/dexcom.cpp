@@ -229,10 +229,6 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
             ESP_LOGW(TAG, "State: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.state));
           } else {
             const auto glucose_response_msg = dexcom_msg->glucose_response_msg;
-            if (glucose_response_msg.state != 0x06) {
-              ESP_LOGW(TAG, "ERROR - We will not continue due to safety reasons (warmup, stopped, waiting for "
-                            "calibration(s), failed or expired.");
-            }
             ESP_LOGI(TAG, "Glucose - Status:            %s (%u)", enum_to_c_str(glucose_response_msg.status),
                      glucose_response_msg.status);
             ESP_LOGI(TAG, "Glucose - Sequence:          %u", glucose_response_msg.sequence);

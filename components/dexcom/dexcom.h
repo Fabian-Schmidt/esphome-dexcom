@@ -164,8 +164,6 @@ static const bool enum_value_okay(const DEXCOM_CALIBRATION_STATE val) {
 
 static const char *enum_to_c_str(const DEXCOM_CALIBRATION_STATE val) {
   switch (val) {
-    case DEXCOM_CALIBRATION_STATE::OKAY:
-      return "Okay";
     case DEXCOM_CALIBRATION_STATE::STOPPED:
       return "Stopped";
     case DEXCOM_CALIBRATION_STATE::WARMING_UP:
