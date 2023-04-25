@@ -1,4 +1,5 @@
 #include "dexcom.h"
+#include "dexcom_msg.h"
 #include "helpers.h"
 #include "esphome/core/log.h"
 
@@ -69,13 +70,13 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
             response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
             response.init_msg.channel =
                 this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
-            this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
+            this->write_handle_(this->handle_authentication_, (uint8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
           } else if (param->write.handle == this->handle_control_desc_) {
             DEXCOM_MSG response;
             response.opcode = DEXCOM_OPCODE::TIME;
             response.time.unknown_E6 = 0xE6;
             response.time.unknown_64 = 0x64;
-            this->write_handle_(this->handle_control_, (u_int8_t *) &response, 1 + sizeof(TIME_MSG));
+            this->write_handle_(this->handle_control_, (uint8_t *) &response, 1 + sizeof(TIME_MSG));
           }
         }
       } else {
@@ -101,7 +102,7 @@ void Dexcom::gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_para
   }
 }
 
-void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const u_int16_t value_len) {
+void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const uint16_t value_len) {
   auto dexcom_msg = (const DEXCOM_MSG *) value;
   DEXCOM_MSG response;
 
@@ -115,7 +116,7 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
 
           response.opcode = DEXCOM_OPCODE::AUTH_CHALLENGE_RESPONSE;
           response.challenge_response_msg.challenge_response = this->encrypt_(dexcom_msg->challenge_msg.challenge);
-          this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(AUTH_CHALLENGE_RESPONSE_MSG));
+          this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(AUTH_CHALLENGE_RESPONSE_MSG));
         }
         break;
       case DEXCOM_OPCODE::AUTH_FINISH:
@@ -128,10 +129,10 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
               // Request bonding
               response.opcode = DEXCOM_OPCODE::KEEP_ALIVE;
               response.keep_alive.unknown = 0x19;
-              this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(KEEP_ALIVE_MSG));
+              this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(KEEP_ALIVE_MSG));
 
               response.opcode = DEXCOM_OPCODE::BOND_REQUEST;
-              this->write_handle_(handle, (u_int8_t *) &response, 1);
+              this->write_handle_(handle, (uint8_t *) &response, 1);
             } else {
               // What TODO here?
             }
@@ -158,7 +159,7 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
     switch (dexcom_msg->opcode) {
       case DEXCOM_OPCODE::TIME_RESPONSE:
         if (value_len >= (1 + sizeof(TIME_RESPONSE_MSG))) {
-          const u_int16_t crc = crc_xmodem(value, (1 + sizeof(TIME_RESPONSE_MSG)) - 2);
+          const uint16_t crc = crc_xmodem(value, (1 + sizeof(TIME_RESPONSE_MSG)) - 2);
           if (dexcom_msg->time_response.crc != crc) {
             ESP_LOGW(TAG, "Time - CRC error");
           } else if (!enum_value_okay(dexcom_msg->time_response.status)) {
@@ -184,13 +185,13 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
             response.opcode = DEXCOM_OPCODE::G6_GLUCOSE_MSG;
             response.glucose_msg.unknown_A = 0x0A;
             response.glucose_msg.unknown_B = 0xA9;
-            this->write_handle_(handle, (u_int8_t *) &response, 1 + sizeof(GLUCOSE_MSG));
+            this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(GLUCOSE_MSG));
           }
         }
         break;
       case DEXCOM_OPCODE::G6_GLUCOSE_RESPONSE_MSG:
         if (value_len >= (1 + sizeof(GLUCOSE_RESPONSE_MSG))) {
-          const u_int16_t crc = crc_xmodem(value, (1 + sizeof(GLUCOSE_RESPONSE_MSG)) - 2);
+          const uint16_t crc = crc_xmodem(value, (1 + sizeof(GLUCOSE_RESPONSE_MSG)) - 2);
           if (dexcom_msg->glucose_response_msg.crc != crc) {
             ESP_LOGW(TAG, "Glucose - CRC error");
           } else if (!enum_value_okay(dexcom_msg->glucose_response_msg.status)) {
@@ -219,7 +220,7 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
           }
 
           response.opcode = DEXCOM_OPCODE::DISCONNECT;
-          this->write_handle_(handle, (u_int8_t *) &response, 1);
+          this->write_handle_(handle, (uint8_t *) &response, 1);
         }
 
         break;
@@ -229,7 +230,7 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
   }
 }
 
-u_int16_t Dexcom::find_handle_(const esp32_ble_tracker::ESPBTUUID *characteristic) {
+uint16_t Dexcom::find_handle_(const esp32_ble_tracker::ESPBTUUID *characteristic) {
   auto *chr = this->parent_->get_characteristic(SERVICE_UUID, *characteristic);
   if (chr == nullptr) {
     ESP_LOGW(TAG, "[%s] No characteristic found at service %s char %s", this->get_name().c_str(),
@@ -239,7 +240,7 @@ u_int16_t Dexcom::find_handle_(const esp32_ble_tracker::ESPBTUUID *characteristi
   return chr->handle;
 }
 
-u_int16_t Dexcom::find_descriptor(u_int16_t handle) {
+uint16_t Dexcom::find_descriptor(uint16_t handle) {
   if (handle == 0) {
     return 0;
   }
@@ -257,7 +258,7 @@ u_int16_t Dexcom::find_descriptor(u_int16_t handle) {
   }
 }
 
-bool Dexcom::register_notify_(const u_int16_t handle, const u_int16_t handle_desc, BT_NOTIFICATION_TYPE type) {
+bool Dexcom::register_notify_(const uint16_t handle, const uint16_t handle_desc, BT_NOTIFICATION_TYPE type) {
   this->register_notify_counter_ = 0;
 
   auto status =
@@ -273,7 +274,7 @@ bool Dexcom::register_notify_(const u_int16_t handle, const u_int16_t handle_des
     return false;
   }
 
-  u_int16_t notify_en;
+  uint16_t notify_en;
   switch (type) {
     case BT_NOTIFICATION_TYPE::OFF:
       notify_en = 0;
@@ -292,7 +293,7 @@ bool Dexcom::register_notify_(const u_int16_t handle, const u_int16_t handle_des
       break;
   }
   status = esp_ble_gattc_write_char_descr(this->parent_->get_gattc_if(), this->parent_->get_conn_id(), handle_desc,
-                                          sizeof(notify_en), (u_int8_t *) &notify_en, ESP_GATT_WRITE_TYPE_RSP,
+                                          sizeof(notify_en), (uint8_t *) &notify_en, ESP_GATT_WRITE_TYPE_RSP,
                                           ESP_GATT_AUTH_REQ_NONE);
   if (status) {
     ESP_LOGW(TAG, "esp_ble_gattc_write_char_descr error, status=%d", status);
@@ -304,7 +305,7 @@ bool Dexcom::register_notify_(const u_int16_t handle, const u_int16_t handle_des
   }
 }
 
-bool Dexcom::write_handle_(const u_int16_t handle, u_int8_t *value, const u_int16_t value_len) {
+bool Dexcom::write_handle_(const uint16_t handle, uint8_t *value, const uint16_t value_len) {
   auto status = esp_ble_gattc_write_char(this->parent_->get_gattc_if(), this->parent_->get_conn_id(), handle, value_len,
                                          value, ESP_GATT_WRITE_TYPE_RSP, ESP_GATT_AUTH_REQ_NONE);
 
@@ -320,7 +321,7 @@ bool Dexcom::write_handle_(const u_int16_t handle, u_int8_t *value, const u_int1
   }
 }
 
-bool Dexcom::read_handle_(const u_int16_t handle) {
+bool Dexcom::read_handle_(const uint16_t handle) {
   auto status = esp_ble_gattc_read_char(this->parent_->get_gattc_if(), this->parent_->get_conn_id(), handle,
                                         ESP_GATT_AUTH_REQ_NONE);
 
@@ -335,13 +336,13 @@ bool Dexcom::read_handle_(const u_int16_t handle) {
   }
 }
 
-std::array<u_int8_t, 8> Dexcom::encrypt_(const std::array<u_int8_t, 8> data) {
-  std::array<u_int8_t, 8> ret;
+std::array<uint8_t, 8> Dexcom::encrypt_(const std::array<uint8_t, 8> data) {
+  std::array<uint8_t, 8> ret;
 
   esp_aes_context ctx;
   esp_aes_init(&ctx);
 
-  const std::array<u_int8_t, 16> key{'0',
+  const std::array<uint8_t, 16> key{'0',
                                      '0',
                                      this->transmitter_id_[0],
                                      this->transmitter_id_[1],
@@ -365,10 +366,10 @@ std::array<u_int8_t, 8> Dexcom::encrypt_(const std::array<u_int8_t, 8> data) {
     return ret;
   }
 
-  u_int8_t input[16];
+  uint8_t input[16];
   std::memcpy(input, data.data(), 8);
   std::memcpy(input + 8, data.data(), 8);
-  u_int8_t output[16];
+  uint8_t output[16];
 
   status = esp_aes_crypt_ecb(&ctx, ESP_AES_ENCRYPT, input, output);
   if (status != 0) {
