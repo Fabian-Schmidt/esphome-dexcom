@@ -362,6 +362,8 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   }
   void set_transmitter_id(const char *val) { this->transmitter_id_ = val; }
   void set_use_alternative_bt_channel(bool val) { this->use_alternative_bt_channel_ = val; }
+  void set_glucose_in_mg_dl(sensor::Sensor *val) { this->glucose_in_mg_dl_ = val; };
+  void set_glucose_in_mmol_l(sensor::Sensor *val) { this->glucose_in_mmol_l_ = val; };
 
  protected:
   std::string name_;
@@ -385,7 +387,10 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   u_int16_t handle_authentication_desc_ = 0;
   u_int16_t handle_backfill_ = 0;
 
-  void reset_state(){};
+  sensor::Sensor *glucose_in_mg_dl_{nullptr};
+  sensor::Sensor *glucose_in_mmol_l_{nullptr};
+
+  inline void reset_state() { this->counter_ = 0; }
 };
 
 }  // namespace dexcom

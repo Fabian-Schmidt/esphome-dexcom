@@ -13,6 +13,8 @@ void Dexcom::dump_config() {
   ESP_LOGCONFIG(TAG, "Dexcom");
   ESP_LOGCONFIG(TAG, "  Transmitter id: %s", this->transmitter_id_);
   ESP_LOGCONFIG(TAG, "  Use Alternative BT Channel: %s", YESNO(this->use_alternative_bt_channel_));
+  LOG_SENSOR("  ", "Glucose in mg/dl", this->glucose_in_mg_dl_);
+  LOG_SENSOR("  ", "Glucose in mmol/l", this->glucose_in_mmol_l_);
 }
 
 void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param) {
@@ -20,7 +22,6 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
     case ESP_GATTC_OPEN_EVT:
       if (param->open.status == ESP_GATT_OK) {
         ESP_LOGI(TAG, "[%s] Connected successfully", this->get_name().c_str());
-        this->counter_ = 0;
         this->reset_state();
       }
       break;
@@ -207,6 +208,13 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
             ESP_LOGI(TAG, "Glucose - Trend:           %u / %i", glucose_response_msg.trend,
                      glucose_response_msg.trend_signed);
             ESP_LOGI(TAG, "Glucose - Glucose predict: %u", glucose_response_msg.predicted_glucose);
+
+            if (this->glucose_in_mg_dl_ != nullptr) {
+              this->glucose_in_mg_dl_->publish_state(glucose_response_msg.glucose);
+            }
+            if (this->glucose_in_mmol_l_ != nullptr) {
+              this->glucose_in_mmol_l_->publish_state(((float) glucose_response_msg.glucose) / 18.0f);
+            }
           }
 
           response.opcode = DEXCOM_OPCODE::DISCONNECT;

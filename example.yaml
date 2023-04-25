@@ -38,3 +38,7 @@ sensor:
     ble_client_id: dexcom_ble_client_id
     transmitter_id: ${transmitter_id}
     use_alternative_bt_channel: ${use_alternative_bt_channel}
+    glucose_in_mg_dl:
+      name: Glucose in mg/dl
+    glucose_in_mmol_l:
+      name: Glucose in mmol/l
