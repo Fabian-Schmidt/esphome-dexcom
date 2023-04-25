@@ -205,8 +205,7 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
             ESP_LOGI(TAG, "Glucose - DisplayOnly:     %s", YESNO(glucose_response_msg.glucoseIsDisplayOnly));
             ESP_LOGI(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(glucose_response_msg.state),
                      glucose_response_msg.state);
-            ESP_LOGI(TAG, "Glucose - Trend:           %u / %i", glucose_response_msg.trend,
-                     glucose_response_msg.trend_signed);
+            ESP_LOGI(TAG, "Glucose - Trend:           %i", glucose_response_msg.trend);
             ESP_LOGI(TAG, "Glucose - Glucose predict: %u", glucose_response_msg.predicted_glucose);
 
             if (this->glucose_in_mg_dl_ != nullptr) {

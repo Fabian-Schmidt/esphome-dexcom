@@ -294,10 +294,7 @@ struct GLUCOSE_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-st
   u_int16_t glucose : 12;
   u_int8_t glucoseIsDisplayOnly : 4;
   DEXCOM_CALIBRATION_STATE state;
-  union {
-    u_int8_t trend;
-    int8_t trend_signed;
-  };
+  int8_t trend;
   // Mask necessary? 0x03ff?
   u_int16_t predicted_glucose;
   u_int16_t crc;
