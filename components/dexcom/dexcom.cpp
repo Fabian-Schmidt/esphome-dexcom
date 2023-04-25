@@ -1,5 +1,4 @@
 #include "dexcom.h"
-#include "dexcom_msg.h"
 #include "helpers.h"
 #include "esphome/core/log.h"
 
@@ -19,6 +18,10 @@ void Dexcom::dump_config() {
   LOG_SENSOR("  ", "Trend", this->trend_);
   LOG_SENSOR("  ", "Glucose predict in mg/dl", this->glucose_predict_in_mg_dl_);
   LOG_SENSOR("  ", "Glucose predict in mmol/l", this->glucose_predict_in_mmol_l_);
+  LOG_SENSOR("  ", "Sensor age", this->sensor_age_);
+  LOG_SENSOR("  ", "Sensor session age", this->sensor_session_age_);
+  LOG_SENSOR("  ", "Sensor remaining lifetime", this->sensor_remaining_lifetime_);
+  LOG_SENSOR("  ", "Sensor session remaining lifetime", this->sensor_session_remaining_lifetime_);
 }
 
 void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param) {
@@ -32,6 +35,7 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
 
     case ESP_GATTC_DISCONNECT_EVT:
       ESP_LOGI(TAG, "[%s] Disconnected", this->get_name().c_str());
+      this->submit_value_to_sensors_();
       break;
 
     case ESP_GATTC_SEARCH_CMPL_EVT:
@@ -155,7 +159,6 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
                    dexcom_msg->invalid_response.opcode, dexcom_msg->invalid_response.msg_length);
         }
         break;
-
       default:
         break;
     }
@@ -169,6 +172,8 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
           } else if (!enum_value_okay(dexcom_msg->time_response.status)) {
             ESP_LOGW(TAG, "Time - Status: %s", enum_to_c_str(dexcom_msg->time_response.status));
           } else {
+            this->time_msg_ = dexcom_msg->time_response;
+
             ESP_LOGI(TAG, "Time - Status:           %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
                      dexcom_msg->time_response.status);
 
@@ -202,33 +207,20 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
           } else if (!enum_value_okay(dexcom_msg->glucose_response_msg.state)) {
             ESP_LOGW(TAG, "Glucose - State: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.state));
           } else {
-            const auto glucose_response_msg = dexcom_msg->glucose_response_msg;
-            ESP_LOGI(TAG, "Glucose - Status:          %s (%u)", enum_to_c_str(glucose_response_msg.status),
-                     glucose_response_msg.status);
-            ESP_LOGD(TAG, "Glucose - Sequence:        %u", glucose_response_msg.sequence);
-            ESP_LOGI(TAG, "Glucose - Timestamp:       %u", glucose_response_msg.timestamp);
-            ESP_LOGI(TAG, "Glucose - Glucose:         %u", glucose_response_msg.glucose);
-            ESP_LOGI(TAG, "Glucose - DisplayOnly:     %s", YESNO(glucose_response_msg.glucoseIsDisplayOnly));
-            ESP_LOGI(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(glucose_response_msg.state),
-                     glucose_response_msg.state);
-            ESP_LOGI(TAG, "Glucose - Trend:           %i", glucose_response_msg.trend);
-            ESP_LOGI(TAG, "Glucose - Glucose predict: %u", glucose_response_msg.predicted_glucose);
+            this->glucose_msg_ = dexcom_msg->glucose_response_msg;
+            this->got_valid_msg_ = true;
 
-            if (this->glucose_in_mg_dl_ != nullptr) {
-              this->glucose_in_mg_dl_->publish_state(glucose_response_msg.glucose);
-            }
-            if (this->glucose_in_mmol_l_ != nullptr) {
-              this->glucose_in_mmol_l_->publish_state(((float) glucose_response_msg.glucose) / 18.0f);
-            }
-            if (this->trend_ != nullptr) {
-              this->trend_->publish_state(glucose_response_msg.trend);
-            }
-            if (this->glucose_predict_in_mg_dl_ != nullptr) {
-              this->glucose_predict_in_mg_dl_->publish_state(glucose_response_msg.predicted_glucose);
-            }
-            if (this->glucose_predict_in_mmol_l_ != nullptr) {
-              this->glucose_predict_in_mmol_l_->publish_state(((float) glucose_response_msg.predicted_glucose) / 18.0f);
-            }
+            ESP_LOGI(TAG, "Glucose - Status:          %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.status),
+                     dexcom_msg->glucose_response_msg.status);
+            ESP_LOGD(TAG, "Glucose - Sequence:        %u", dexcom_msg->glucose_response_msg.sequence);
+            ESP_LOGI(TAG, "Glucose - Timestamp:       %u", dexcom_msg->glucose_response_msg.timestamp);
+            ESP_LOGI(TAG, "Glucose - Glucose:         %u", dexcom_msg->glucose_response_msg.glucose);
+            ESP_LOGI(TAG, "Glucose - DisplayOnly:     %s",
+                     YESNO(dexcom_msg->glucose_response_msg.glucoseIsDisplayOnly));
+            ESP_LOGI(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.state),
+                     dexcom_msg->glucose_response_msg.state);
+            ESP_LOGI(TAG, "Glucose - Trend:           %i", dexcom_msg->glucose_response_msg.trend);
+            ESP_LOGI(TAG, "Glucose - Glucose predict: %u", dexcom_msg->glucose_response_msg.predicted_glucose);
           }
 
           response.opcode = DEXCOM_OPCODE::DISCONNECT;
@@ -239,6 +231,41 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
       default:
         break;
     }
+  }
+}
+
+void Dexcom::submit_value_to_sensors_() {
+  if (this->got_valid_msg_) {
+    if (this->glucose_in_mg_dl_ != nullptr) {
+      this->glucose_in_mg_dl_->publish_state(this->glucose_msg_.glucose);
+    }
+    if (this->glucose_in_mmol_l_ != nullptr) {
+      this->glucose_in_mmol_l_->publish_state(((float) this->glucose_msg_.glucose) / 18.0f);
+    }
+    if (this->trend_ != nullptr) {
+      this->trend_->publish_state(this->glucose_msg_.trend);
+    }
+    if (this->glucose_predict_in_mg_dl_ != nullptr) {
+      this->glucose_predict_in_mg_dl_->publish_state(this->glucose_msg_.predicted_glucose);
+    }
+    if (this->glucose_predict_in_mmol_l_ != nullptr) {
+      this->glucose_predict_in_mmol_l_->publish_state(((float) this->glucose_msg_.predicted_glucose) / 18.0f);
+    }
+    if (this->sensor_age_ != nullptr) {
+      this->sensor_age_->publish_state(this->time_msg_.currentTime);
+    }
+    if (this->sensor_session_age_ != nullptr) {
+      this->sensor_session_age_->publish_state(this->time_msg_.currentTime - this->time_msg_.sessionStartTime);
+    }
+    if (this->sensor_remaining_lifetime_ != nullptr) {
+      this->sensor_remaining_lifetime_->publish_state(DEXCOM_SENSOR_LIFETIME - this->time_msg_.currentTime);
+    }
+    if (this->sensor_session_remaining_lifetime_ != nullptr) {
+      this->sensor_session_remaining_lifetime_->publish_state(
+          DEXCOM_SENSOR_SESSION_LIFETIME - (this->time_msg_.currentTime - this->time_msg_.sessionStartTime));
+    }
+
+    this->reset_state();
   }
 }
 

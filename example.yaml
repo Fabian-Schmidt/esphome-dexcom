@@ -53,3 +53,11 @@ sensor:
     glucose_predict_in_mmol_l:
       name: Glucose predict in mmol/l
       # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
+    sensor_age:
+      name: Sensor age
+    sensor_session_age:
+      name: Sensor session age
+    sensor_remaining_lifetime:
+      name: Sensor remaining lifetime
+    sensor_session_remaining_lifetime:
+      name: Sensor session remaining lifetime

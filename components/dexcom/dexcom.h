@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dexcom_msg.h"
 #include "esphome/core/component.h"
 #include "esphome/components/ble_client/ble_client.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
@@ -11,6 +12,9 @@
 
 namespace esphome {
 namespace dexcom {
+
+#define DEXCOM_SENSOR_LIFETIME (100.0f /*days*/ * 24.0f * 60.0f * 60.0f)
+#define DEXCOM_SENSOR_SESSION_LIFETIME (10.0f /*days*/ * 24.0f * 60.0f * 60.0f)
 
 enum class BT_NOTIFICATION_TYPE {
   UNSET,
@@ -58,6 +62,10 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   void set_trend(sensor::Sensor *val) { this->trend_ = val; };
   void set_glucose_predict_in_mg_dl(sensor::Sensor *val) { this->glucose_predict_in_mg_dl_ = val; };
   void set_glucose_predict_in_mmol_l(sensor::Sensor *val) { this->glucose_predict_in_mmol_l_ = val; };
+  void set_sensor_age(sensor::Sensor *val) { this->sensor_age_ = val; };
+  void set_sensor_session_age(sensor::Sensor *val) { this->sensor_session_age_ = val; };
+  void set_sensor_remaining_lifetime(sensor::Sensor *val) { this->sensor_remaining_lifetime_ = val; };
+  void set_sensor_session_remaining_lifetime(sensor::Sensor *val) { this->sensor_session_remaining_lifetime_ = val; };
 
  protected:
   std::string name_;
@@ -66,6 +74,7 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   bool use_alternative_bt_channel_ = false;
 
   void read_incomming_msg_(const uint16_t handle, uint8_t *value, const uint16_t value_len);
+  void submit_value_to_sensors_();
   uint16_t find_handle_(const esp32_ble_tracker::ESPBTUUID *characteristic);
   uint16_t find_descriptor(uint16_t handle);
   bool register_notify_(const uint16_t handle, const uint16_t handle_desc, BT_NOTIFICATION_TYPE type);
@@ -86,8 +95,20 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   sensor::Sensor *trend_{nullptr};
   sensor::Sensor *glucose_predict_in_mg_dl_{nullptr};
   sensor::Sensor *glucose_predict_in_mmol_l_{nullptr};
+  sensor::Sensor *sensor_age_{nullptr};
+  sensor::Sensor *sensor_session_age_{nullptr};
+  sensor::Sensor *sensor_remaining_lifetime_{nullptr};
+  sensor::Sensor *sensor_session_remaining_lifetime_{nullptr};
 
-  inline void reset_state() {}
+  bool got_valid_msg_ = false;
+  TIME_RESPONSE_MSG time_msg_{};
+  GLUCOSE_RESPONSE_MSG glucose_msg_{};
+
+  inline void reset_state() {
+    this->got_valid_msg_ = false;
+    this->time_msg_ = {};
+    this->glucose_msg_ = {};
+  }
 };
 
 }  // namespace dexcom
