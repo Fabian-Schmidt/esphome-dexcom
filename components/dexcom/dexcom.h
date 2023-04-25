@@ -289,6 +289,7 @@ struct GLUCOSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack
 struct GLUCOSE_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
   DEXCOM_TRANSMITTER_STATUS status;
   u_int32_t sequence;
+  /// Seconds since transmitter activation
   u_int32_t timestamp;
   u_int16_t glucose : 12;
   u_int8_t glucoseIsDisplayOnly : 4;
@@ -351,6 +352,7 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
 
   void gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                            esp_ble_gattc_cb_param_t *param) override;
+  void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) override;
   std::string get_name() {
     if (this->name_.empty()) {
       return this->parent_->address_str();

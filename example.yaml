@@ -1,42 +1,37 @@
 substitutions:
   # Set the MAC address of your device here
-  mac_address: 80:7D:3A:A5:B2:4E
-  transmitter_id: 8SQTJP
+  mac_address: DA:5C:E9:23:1B:9C
+  transmitter_id: 8YD26N
   use_alternative_bt_channel: "False"
 
 esphome:
   name: "dexcom-example"
 
 external_components:
-  # https://github.com/esphome/esphome/pull/4258
-  - source: github://pr#4258
-    components: [ble_client, esp32_ble, esp32_ble_client, esp32_ble_tracker]
-    # refresh: always
-  - source: github://Fabian-Schmidt/esphome-dexcom
-    # refresh: always
-  # - source:
-  #       type: local
-  #       path: components
+  #- source: github://Fabian-Schmidt/esphome-dexcom
+  #   # refresh: always
+  - source:
+      type: local
+      path: components
 
 esp32:
   board: esp32dev
 
 logger:
-  # baud_rate: 2000000
   level: VERBOSE
   # level: DEBUG
 
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 10ms
+    window: 10ms
+    active: true
+
 esp32_ble:
-  io_capability: keyboard_only
 
 ble_client:
   - mac_address: ${mac_address}
     id: dexcom_ble_client_id
-    on_passkey_request:
-      then:
-        - ble_client.passkey_reply:
-            id: dexcom_ble_client_id
-            passkey: 123456
 
 sensor:
   - platform: dexcom

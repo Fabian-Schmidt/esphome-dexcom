@@ -9,19 +9,11 @@ namespace dexcom {
 
 static const char *const TAG = "dexcom";
 
-/**
- * Expected steps:
- * TODO
- * 1. ESP_GATTC_OPEN_EVT
- * 2. ESP_GATTC_SEARCH_CMPL_EVT -> `esp_ble_gattc_read_char` - with ESP_GATT_AUTH_REQ_SIGNED_MITM
- * - Auth happens if necessary
- * 3. ESP_GATTC_READ_CHAR_EVT -> first value & (if notify) `esp_ble_gattc_register_for_notify`
- * 4. ESP_GATTC_REG_FOR_NOTIFY_EVT
- * 5. ESP_GATTC_NOTIFY_EVT -> continous values
- * if notify: every 20 seconds (polling frequency) a 60 second keep alive is send.
- */
-
-void Dexcom::dump_config() { ESP_LOGCONFIG(TAG, "Dexcom"); }
+void Dexcom::dump_config() {
+  ESP_LOGCONFIG(TAG, "Dexcom");
+  ESP_LOGCONFIG(TAG, "  Transmitter id: %s", this->transmitter_id_);
+  ESP_LOGCONFIG(TAG, "  Use Alternative BT Channel: %s", YESNO(this->use_alternative_bt_channel_));
+}
 
 void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param) {
   switch (event) {
@@ -41,59 +33,29 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       ESP_LOGD(TAG, "[%s] Search complete", this->get_name().c_str());
       this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
       this->handle_communication_ = this->find_handle_(&CHARACTERISTIC_UUID_COMMUNICATION);
+      ESP_LOGV(TAG, "[%s] handle_communication 0x%04x", this->get_name().c_str(), this->handle_communication_);
       this->handle_control_ = this->find_handle_(&CHARACTERISTIC_UUID_CONTROL);
+      ESP_LOGV(TAG, "[%s] handle_control 0x%04x", this->get_name().c_str(), this->handle_control_);
       this->handle_control_desc_ = this->find_descriptor(handle_control_);
+      ESP_LOGV(TAG, "[%s] handle_control_desc 0x%04x", this->get_name().c_str(), this->handle_control_desc_);
       this->handle_authentication_ = this->find_handle_(&CHARACTERISTIC_UUID_AUTHENTICATION);
+      ESP_LOGV(TAG, "[%s] handle_authentication 0x%04x", this->get_name().c_str(), this->handle_authentication_);
       this->handle_authentication_desc_ = this->find_descriptor(handle_authentication_);
+      ESP_LOGV(TAG, "[%s] handle_authentication_desc 0x%04x", this->get_name().c_str(),
+               this->handle_authentication_desc_);
       this->handle_backfill_ = this->find_handle_(&CHARACTERISTIC_UUID_BACKFILL);
+      ESP_LOGV(TAG, "[%s] handle_backfill 0x%04x", this->get_name().c_str(), this->handle_backfill_);
 
       this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
                              BT_NOTIFICATION_TYPE::INDICATION);
 
-    case ESP_GATTC_READ_CHAR_EVT:
-      if (param->read.conn_id != this->parent_->get_conn_id()) {
-        break;
-      }
-      if (param->read.status == ESP_GATT_OK) {
-        this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
-        ESP_LOGV(TAG, "[%s] Reading char at handle 0x%04x, status=%d, data=%s", this->get_name().c_str(),
-                 param->read.handle, param->read.status,
-                 format_hex_pretty(param->read.value, param->read.value_len).c_str());
-      } else {
-        ESP_LOGW(TAG, "[%s] Error reading char at handle 0x%04x, status=%d", this->get_name().c_str(),
-                 param->read.handle, param->read.status);
-        break;
-      }
-      this->read_incomming_msg_(param->read.handle, param->read.value, param->read.value_len);
-      break;
-
-    case ESP_GATTC_REG_FOR_NOTIFY_EVT:
-      if (param->reg_for_notify.status == ESP_GATT_OK) {
-        this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
-        ESP_LOGV(TAG, "[%s] Register notify 0x%04x status=%d", this->get_name().c_str(), param->reg_for_notify.handle,
-                 param->reg_for_notify.status);
-      } else {
-        ESP_LOGW(TAG, "[%s] Register notify 0x%04x status=%d", this->get_name().c_str(), param->reg_for_notify.handle,
-                 param->reg_for_notify.status);
-      }
-      break;
-
     case ESP_GATTC_NOTIFY_EVT:
-      ESP_LOGV(TAG, "[%s] Notify to handle 0x%04x is notify=%s, data=%s", this->get_name().c_str(),
-               param->notify.handle, param->notify.is_notify ? "true" : "false",
+      ESP_LOGD(TAG, "[%s] Notify to handle 0x%04x is %s, data=%s", this->get_name().c_str(), param->notify.handle,
+               param->notify.is_notify ? "notify" : "indicate",
                format_hex_pretty(param->notify.value, param->notify.value_len).c_str());
       this->read_incomming_msg_(param->notify.handle, param->notify.value, param->notify.value_len);
       break;
 
-    case ESP_GATTC_WRITE_CHAR_EVT:
-      if (param->write.status == ESP_GATT_OK) {
-        ESP_LOGV(TAG, "[%s] Write to char handle 0x%04x status=%d", this->get_name().c_str(), param->write.handle,
-                 param->write.status);
-      } else {
-        ESP_LOGW(TAG, "[%s] Write to char handle 0x%04x status=%d", this->get_name().c_str(), param->write.handle,
-                 param->write.status);
-      }
-      break;
     case ESP_GATTC_WRITE_DESCR_EVT:
       if (param->write.status == ESP_GATT_OK) {
         ESP_LOGV(TAG, "[%s] Write to descr handle 0x%04x status=%d", this->get_name().c_str(), param->write.handle,
@@ -123,6 +85,19 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       break;
   }
 }
+
+void Dexcom::gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
+  switch (event) {
+    case ESP_GAP_BLE_AUTH_CMPL_EVT:
+      if (param->ble_security.auth_cmpl.success) {
+        this->register_notify_(this->handle_control_, this->handle_control_desc_, BT_NOTIFICATION_TYPE::INDICATION);
+      }
+      break;
+    default:
+      break;
+  }
+}
+
 void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const u_int16_t value_len) {
   auto dexcom_msg = (const DEXCOM_MSG *) value;
   DEXCOM_MSG response;
@@ -155,15 +130,10 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
               response.opcode = DEXCOM_OPCODE::BOND_REQUEST;
               this->write_handle_(handle, (u_int8_t *) &response, 1);
             } else {
-              // response.opcode = DEXCOM_OPCODE::AUTH_INIT;
-              // response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
-              // response.init_msg.channel = this->use_alternative_bt_channel_ ?
-              // DEXCOM_BT_CHANNEL::ALT_CHANNEL
-              //                                                               :
-              //                                                               DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
-              // this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 +
-              // sizeof(AUTH_INIT_MSG));
+              // What TODO here?
             }
+          } else {
+            // What TODO here?
           }
         }
         break;
@@ -175,7 +145,6 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
         break;
       case DEXCOM_OPCODE::KEEP_ALIVE_RESPONSE:
         if (value_len == (1 + sizeof(KEEP_ALIVE_RESPONSE_MSG))) {
-          this->register_notify_(this->handle_control_, this->handle_control_desc_, BT_NOTIFICATION_TYPE::INDICATION);
         }
         break;
 
@@ -188,28 +157,26 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
         if (value_len >= (1 + sizeof(TIME_RESPONSE_MSG))) {
           const u_int16_t crc = crc_xmodem(value, (1 + sizeof(TIME_RESPONSE_MSG)) - 2);
           if (dexcom_msg->time_response.crc != crc) {
-            ESP_LOGW(TAG, "CRC");
+            ESP_LOGW(TAG, "Time - CRC error");
           } else if (!enum_value_okay(dexcom_msg->time_response.status)) {
-            ESP_LOGW(TAG, "Status: %s", enum_to_c_str(dexcom_msg->time_response.status));
+            ESP_LOGW(TAG, "Time - Status: %s", enum_to_c_str(dexcom_msg->time_response.status));
           } else {
-            ESP_LOGI(TAG, "Time - Status:              %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
+            ESP_LOGI(TAG, "Time - Status:           %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
                      dexcom_msg->time_response.status);
 
-            ESP_LOGI(TAG, "Time - since activation:    %d (%d days, %d hours)",
-                     dexcom_msg->time_response.currentTime,  // Activation date is now() - currentTime * 1000
+            ESP_LOGI(TAG, "Time - Since activation: %d (%d days, %d hours)", dexcom_msg->time_response.currentTime,
                      dexcom_msg->time_response.currentTime / (60 * 60 * 24),     // Days round down
                      (dexcom_msg->time_response.currentTime / (60 * 60)) % 24);  // Remaining hours
-            ESP_LOGI(TAG, "Time - since session start: %d", dexcom_msg->time_response.sessionStartTime);
+            ESP_LOGD(TAG, "Time - Since start:      %d", dexcom_msg->time_response.sessionStartTime);
             const auto session_runtime =
                 dexcom_msg->time_response.currentTime - dexcom_msg->time_response.sessionStartTime;
-            ESP_LOGI(TAG, "Time - since session runtime: %d (%d days, %d hours)", session_runtime,
+            ESP_LOGI(TAG, "Time - Session runtime:  %d (%d days, %d hours)", session_runtime,
                      session_runtime / (60 * 60 * 24),     // Days round down
                      (session_runtime / (60 * 60)) % 24);  // Remaining hours
 
-            // if (dexcom_msg->time_response.status == 0x81)
-            //   ESP_LOGW(TAG, "WARNING - Low Battery");
-            // if (dexcom_msg->time_response.status == 0x83)
-            //   ESP_LOGW(TAG, "WARNING - Transmitter Expired");
+            if (dexcom_msg->time_response.status == DEXCOM_TRANSMITTER_STATUS::LOW_BATTERY) {
+              ESP_LOGW(TAG, "Time - Low Battery");
+            }
 
             response.opcode = DEXCOM_OPCODE::G6_GLUCOSE_MSG;
             response.glucose_msg.unknown_A = 0x0A;
@@ -222,26 +189,24 @@ void Dexcom::read_incomming_msg_(const u_int16_t handle, u_int8_t *value, const 
         if (value_len >= (1 + sizeof(GLUCOSE_RESPONSE_MSG))) {
           const u_int16_t crc = crc_xmodem(value, (1 + sizeof(GLUCOSE_RESPONSE_MSG)) - 2);
           if (dexcom_msg->glucose_response_msg.crc != crc) {
-            ESP_LOGW(TAG, "CRC");
+            ESP_LOGW(TAG, "Glucose - CRC error");
           } else if (!enum_value_okay(dexcom_msg->glucose_response_msg.status)) {
-            ESP_LOGW(TAG, "Status: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.status));
+            ESP_LOGW(TAG, "Glucose - Status: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.status));
           } else if (!enum_value_okay(dexcom_msg->glucose_response_msg.state)) {
-            ESP_LOGW(TAG, "State: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.state));
+            ESP_LOGW(TAG, "Glucose - State: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.state));
           } else {
             const auto glucose_response_msg = dexcom_msg->glucose_response_msg;
-            ESP_LOGI(TAG, "Glucose - Status:            %s (%u)", enum_to_c_str(glucose_response_msg.status),
+            ESP_LOGI(TAG, "Glucose - Status:          %s (%u)", enum_to_c_str(glucose_response_msg.status),
                      glucose_response_msg.status);
-            ESP_LOGI(TAG, "Glucose - Sequence:          %u", glucose_response_msg.sequence);
-            ESP_LOGI(TAG, "Glucose - Timestamp:         %u",
-                     glucose_response_msg.timestamp);  // Seconds since transmitter activation
-            ESP_LOGI(TAG, "Glucose - DisplayOnly:       %s",
-                     (glucose_response_msg.glucoseIsDisplayOnly ? "true" : "false"));
-            ESP_LOGI(TAG, "Glucose - Glucose:           %u", glucose_response_msg.glucose);
-            ESP_LOGI(TAG, "Glucose - State:             %s (%u)", enum_to_c_str(glucose_response_msg.state),
+            ESP_LOGD(TAG, "Glucose - Sequence:        %u", glucose_response_msg.sequence);
+            ESP_LOGI(TAG, "Glucose - Timestamp:       %u", glucose_response_msg.timestamp);
+            ESP_LOGI(TAG, "Glucose - Glucose:         %u", glucose_response_msg.glucose);
+            ESP_LOGI(TAG, "Glucose - DisplayOnly:     %s", YESNO(glucose_response_msg.glucoseIsDisplayOnly));
+            ESP_LOGI(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(glucose_response_msg.state),
                      glucose_response_msg.state);
-            ESP_LOGI(TAG, "Glucose - Trend:             %u / %i", glucose_response_msg.trend,
+            ESP_LOGI(TAG, "Glucose - Trend:           %u / %i", glucose_response_msg.trend,
                      glucose_response_msg.trend_signed);
-            ESP_LOGI(TAG, "Glucose - Glucose predicted: %u", glucose_response_msg.predicted_glucose);
+            ESP_LOGI(TAG, "Glucose - Glucose predict: %u", glucose_response_msg.predicted_glucose);
           }
 
           response.opcode = DEXCOM_OPCODE::DISCONNECT;
@@ -292,6 +257,7 @@ bool Dexcom::register_notify_(const u_int16_t handle, const u_int16_t handle_des
              SERVICE_UUID.to_string().c_str(), handle, status);
     return false;
   }
+
   if (handle_desc == 0) {
     return false;
   }
@@ -320,10 +286,11 @@ bool Dexcom::register_notify_(const u_int16_t handle, const u_int16_t handle_des
   if (status) {
     ESP_LOGW(TAG, "esp_ble_gattc_write_char_descr error, status=%d", status);
     return false;
+  } else {
+    ESP_LOGD(TAG, "[%s] Wrote notify=%u to handle 0x%04x, desc 0x%04x, for conn %d", this->get_name().c_str(),
+             notify_en, handle, handle_desc, this->parent_->get_conn_id());
+    return true;
   }
-  ESP_LOGD(TAG, "[%s] wrote notify=%u to status config 0x%04x, for conn %d", this->get_name().c_str(), notify_en,
-           handle, this->parent_->get_conn_id());
-  return true;
 }
 
 bool Dexcom::write_handle_(const u_int16_t handle, u_int8_t *value, const u_int16_t value_len) {
