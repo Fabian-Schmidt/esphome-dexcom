@@ -34,18 +34,18 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       ESP_LOGD(TAG, "[%s] Search complete", this->get_name().c_str());
       this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
       this->handle_communication_ = this->find_handle_(&CHARACTERISTIC_UUID_COMMUNICATION);
-      ESP_LOGV(TAG, "[%s] handle_communication 0x%04x", this->get_name().c_str(), this->handle_communication_);
+      ESP_LOGVV(TAG, "[%s] handle_communication 0x%04x", this->get_name().c_str(), this->handle_communication_);
       this->handle_control_ = this->find_handle_(&CHARACTERISTIC_UUID_CONTROL);
-      ESP_LOGV(TAG, "[%s] handle_control 0x%04x", this->get_name().c_str(), this->handle_control_);
+      ESP_LOGVV(TAG, "[%s] handle_control 0x%04x", this->get_name().c_str(), this->handle_control_);
       this->handle_control_desc_ = this->find_descriptor(handle_control_);
-      ESP_LOGV(TAG, "[%s] handle_control_desc 0x%04x", this->get_name().c_str(), this->handle_control_desc_);
+      ESP_LOGVV(TAG, "[%s] handle_control_desc 0x%04x", this->get_name().c_str(), this->handle_control_desc_);
       this->handle_authentication_ = this->find_handle_(&CHARACTERISTIC_UUID_AUTHENTICATION);
-      ESP_LOGV(TAG, "[%s] handle_authentication 0x%04x", this->get_name().c_str(), this->handle_authentication_);
+      ESP_LOGVV(TAG, "[%s] handle_authentication 0x%04x", this->get_name().c_str(), this->handle_authentication_);
       this->handle_authentication_desc_ = this->find_descriptor(handle_authentication_);
-      ESP_LOGV(TAG, "[%s] handle_authentication_desc 0x%04x", this->get_name().c_str(),
-               this->handle_authentication_desc_);
+      ESP_LOGVV(TAG, "[%s] handle_authentication_desc 0x%04x", this->get_name().c_str(),
+                this->handle_authentication_desc_);
       this->handle_backfill_ = this->find_handle_(&CHARACTERISTIC_UUID_BACKFILL);
-      ESP_LOGV(TAG, "[%s] handle_backfill 0x%04x", this->get_name().c_str(), this->handle_backfill_);
+      ESP_LOGVV(TAG, "[%s] handle_backfill 0x%04x", this->get_name().c_str(), this->handle_backfill_);
 
       this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
                              BT_NOTIFICATION_TYPE::INDICATION);
@@ -61,20 +61,22 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
       if (param->write.status == ESP_GATT_OK) {
         ESP_LOGV(TAG, "[%s] Write to descr handle 0x%04x status=%d", this->get_name().c_str(), param->write.handle,
                  param->write.status);
-        this->counter_++;
-        if (this->counter_ == 2) {
-          DEXCOM_MSG response;
-          response.opcode = DEXCOM_OPCODE::AUTH_INIT;
-          response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
-          response.init_msg.channel =
-              this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
-          this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
-        } else if (this->counter_ == 4) {
-          DEXCOM_MSG response;
-          response.opcode = DEXCOM_OPCODE::TIME;
-          response.time.unknown_E6 = 0xE6;
-          response.time.unknown_64 = 0x64;
-          this->write_handle_(this->handle_control_, (u_int8_t *) &response, 1 + sizeof(TIME_MSG));
+        this->register_notify_counter_++;
+        if (this->register_notify_counter_ == 2) {
+          if (param->write.handle == this->handle_authentication_desc_) {
+            DEXCOM_MSG response;
+            response.opcode = DEXCOM_OPCODE::AUTH_INIT;
+            response.init_msg.token = {0x19, 0xF3, 0x89, 0xF8, 0xB7, 0x58, 0x41, 0x33};
+            response.init_msg.channel =
+                this->use_alternative_bt_channel_ ? DEXCOM_BT_CHANNEL::ALT_CHANNEL : DEXCOM_BT_CHANNEL::NORMAL_CHANNEL;
+            this->write_handle_(this->handle_authentication_, (u_int8_t *) &response, 1 + sizeof(AUTH_INIT_MSG));
+          } else if (param->write.handle == this->handle_control_desc_) {
+            DEXCOM_MSG response;
+            response.opcode = DEXCOM_OPCODE::TIME;
+            response.time.unknown_E6 = 0xE6;
+            response.time.unknown_64 = 0x64;
+            this->write_handle_(this->handle_control_, (u_int8_t *) &response, 1 + sizeof(TIME_MSG));
+          }
         }
       } else {
         ESP_LOGW(TAG, "[%s] Write to descr handle 0x%04x status=%d", this->get_name().c_str(), param->write.handle,
@@ -256,6 +258,8 @@ u_int16_t Dexcom::find_descriptor(u_int16_t handle) {
 }
 
 bool Dexcom::register_notify_(const u_int16_t handle, const u_int16_t handle_desc, BT_NOTIFICATION_TYPE type) {
+  this->register_notify_counter_ = 0;
+
   auto status =
       esp_ble_gattc_register_for_notify(this->parent_->get_gattc_if(), this->parent_->get_remote_bda(), handle);
 

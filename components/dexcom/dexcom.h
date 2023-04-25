@@ -376,7 +376,7 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   bool read_handle_(const u_int16_t handle);
   std::array<u_int8_t, 8> encrypt_(std::array<u_int8_t, 8> data);
 
-  u_int8_t counter_ = 0;
+  u_int8_t register_notify_counter_ = 0;
   u_int16_t handle_communication_ = 0;
   u_int16_t handle_control_ = 0;
   u_int16_t handle_control_desc_ = 0;
@@ -387,7 +387,7 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   sensor::Sensor *glucose_in_mg_dl_{nullptr};
   sensor::Sensor *glucose_in_mmol_l_{nullptr};
 
-  inline void reset_state() { this->counter_ = 0; }
+  inline void reset_state() {}
 };
 
 }  // namespace dexcom
