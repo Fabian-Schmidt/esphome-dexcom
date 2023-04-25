@@ -55,6 +55,9 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
   void set_use_alternative_bt_channel(bool val) { this->use_alternative_bt_channel_ = val; }
   void set_glucose_in_mg_dl(sensor::Sensor *val) { this->glucose_in_mg_dl_ = val; };
   void set_glucose_in_mmol_l(sensor::Sensor *val) { this->glucose_in_mmol_l_ = val; };
+  void set_trend(sensor::Sensor *val) { this->trend_ = val; };
+  void set_glucose_predict_in_mg_dl(sensor::Sensor *val) { this->glucose_predict_in_mg_dl_ = val; };
+  void set_glucose_predict_in_mmol_l(sensor::Sensor *val) { this->glucose_predict_in_mmol_l_ = val; };
 
  protected:
   std::string name_;
@@ -80,6 +83,9 @@ class Dexcom : public Component, public ble_client::BLEClientNode {
 
   sensor::Sensor *glucose_in_mg_dl_{nullptr};
   sensor::Sensor *glucose_in_mmol_l_{nullptr};
+  sensor::Sensor *trend_{nullptr};
+  sensor::Sensor *glucose_predict_in_mg_dl_{nullptr};
+  sensor::Sensor *glucose_predict_in_mmol_l_{nullptr};
 
   inline void reset_state() {}
 };

@@ -5,6 +5,7 @@ from esphome.components import ble_client, sensor
 from esphome.const import (
     CONF_ID,
     ICON_EMPTY,
+    UNIT_EMPTY,
 )
 
 DEPENDENCIES = ["esp32_ble_tracker"]
@@ -13,6 +14,9 @@ CONF_USE_ALTERNATIVE_BT_CHANNEL = "use_alternative_bt_channel"
 CONF_TRANSMITTER_ID = "transmitter_id"
 CONF_GLUCOSE_IN_MG_DL = "glucose_in_mg_dl"
 CONF_GLUCOSE_IN_MMOL_L = "glucose_in_mmol_l"
+CONF_TREND = "trend"
+CONF_GLUCOSE_PREDICT_IN_MG_DL = "glucose_predict_in_mg_dl"
+CONF_GLUCOSE_PREDICT_IN_MMOL_L = "glucose_predict_in_mmol_l"
 
 UNIT_MG_DL = "mg/dl"
 UNIT_MMOL_L = "mmol/l"
@@ -44,6 +48,21 @@ CONFIG_SCHEMA = cv.All(
                 icon=ICON_EMPTY,
                 accuracy_decimals=1,
             ),
+            cv.Optional(CONF_TREND): sensor.sensor_schema(
+                unit_of_measurement=UNIT_EMPTY,
+                icon=ICON_EMPTY,
+                accuracy_decimals=0,
+            ),
+            cv.Optional(CONF_GLUCOSE_PREDICT_IN_MG_DL): sensor.sensor_schema(
+                unit_of_measurement=UNIT_MG_DL,
+                icon=ICON_EMPTY,
+                accuracy_decimals=0,
+            ),
+            cv.Optional(CONF_GLUCOSE_PREDICT_IN_MMOL_L): sensor.sensor_schema(
+                unit_of_measurement=UNIT_MMOL_L,
+                icon=ICON_EMPTY,
+                accuracy_decimals=1,
+            ),
         }
     )
     .extend(ble_client.BLE_CLIENT_SCHEMA)
@@ -69,3 +88,12 @@ async def to_code(config):
     if CONF_GLUCOSE_IN_MMOL_L in config:
         sens = await sensor.new_sensor(config[CONF_GLUCOSE_IN_MMOL_L])
         cg.add(var.set_glucose_in_mmol_l(sens))
+    if CONF_TREND in config:
+        sens = await sensor.new_sensor(config[CONF_TREND])
+        cg.add(var.set_trend(sens))
+    if CONF_GLUCOSE_PREDICT_IN_MG_DL in config:
+        sens = await sensor.new_sensor(config[CONF_GLUCOSE_PREDICT_IN_MG_DL])
+        cg.add(var.set_glucose_predict_in_mg_dl(sens))
+    if CONF_GLUCOSE_PREDICT_IN_MMOL_L in config:
+        sens = await sensor.new_sensor(config[CONF_GLUCOSE_PREDICT_IN_MMOL_L])
+        cg.add(var.set_glucose_predict_in_mmol_l(sens))

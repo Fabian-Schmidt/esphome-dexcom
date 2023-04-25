@@ -40,5 +40,16 @@ sensor:
     use_alternative_bt_channel: ${use_alternative_bt_channel}
     glucose_in_mg_dl:
       name: Glucose in mg/dl
+      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
     glucose_in_mmol_l:
       name: Glucose in mmol/l
+      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
+    trend:
+      name: Trend
+      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
+    glucose_predict_in_mg_dl:
+      name: Glucose predict in mg/dl
+      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
+    glucose_predict_in_mmol_l:
+      name: Glucose predict in mmol/l
+      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.

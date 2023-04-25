@@ -16,6 +16,9 @@ void Dexcom::dump_config() {
   ESP_LOGCONFIG(TAG, "  Use Alternative BT Channel: %s", YESNO(this->use_alternative_bt_channel_));
   LOG_SENSOR("  ", "Glucose in mg/dl", this->glucose_in_mg_dl_);
   LOG_SENSOR("  ", "Glucose in mmol/l", this->glucose_in_mmol_l_);
+  LOG_SENSOR("  ", "Trend", this->trend_);
+  LOG_SENSOR("  ", "Glucose predict in mg/dl", this->glucose_predict_in_mg_dl_);
+  LOG_SENSOR("  ", "Glucose predict in mmol/l", this->glucose_predict_in_mmol_l_);
 }
 
 void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param) {
@@ -126,9 +129,9 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
           if (dexcom_msg->auth_finish_msg.auth == DEXCOM_AUTH_RESULT::AUTHENTICATED) {
             if (dexcom_msg->auth_finish_msg.bond == DEXCOM_BOND_REQUEST::BONDING) {
               // Request bonding
-              //response.opcode = DEXCOM_OPCODE::KEEP_ALIVE;
-              //response.keep_alive.time = 10;
-              //this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(KEEP_ALIVE_MSG));
+              // response.opcode = DEXCOM_OPCODE::KEEP_ALIVE;
+              // response.keep_alive.time = 10;
+              // this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(KEEP_ALIVE_MSG));
 
               response.opcode = DEXCOM_OPCODE::BOND_REQUEST;
               this->write_handle_(handle, (uint8_t *) &response, 1);
@@ -148,8 +151,8 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
         break;
       case DEXCOM_OPCODE::INVALID_RESPONSE:
         if (value_len == (1 + sizeof(INVALID_RESPONSE_MSG))) {
-          ESP_LOGW(TAG, "[%s] Invalid message %u len: %u", this->get_name().c_str(), dexcom_msg->invalid_response.opcode,
-                   dexcom_msg->invalid_response.msg_length);
+          ESP_LOGW(TAG, "[%s] Invalid message %u len: %u", this->get_name().c_str(),
+                   dexcom_msg->invalid_response.opcode, dexcom_msg->invalid_response.msg_length);
         }
         break;
 
@@ -216,6 +219,15 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
             }
             if (this->glucose_in_mmol_l_ != nullptr) {
               this->glucose_in_mmol_l_->publish_state(((float) glucose_response_msg.glucose) / 18.0f);
+            }
+            if (this->trend_ != nullptr) {
+              this->trend_->publish_state(glucose_response_msg.trend);
+            }
+            if (this->glucose_predict_in_mg_dl_ != nullptr) {
+              this->glucose_predict_in_mg_dl_->publish_state(glucose_response_msg.predicted_glucose);
+            }
+            if (this->glucose_predict_in_mmol_l_ != nullptr) {
+              this->glucose_predict_in_mmol_l_->publish_state(((float) glucose_response_msg.predicted_glucose) / 18.0f);
             }
           }
 
