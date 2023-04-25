@@ -1,5 +1,6 @@
+#pragma once
 
-#include "esphome/core/helpers.h"
+#include "esphome/core/datatypes.h"
 
 namespace esphome {
 namespace dexcom {
@@ -20,7 +21,7 @@ enum class DEXCOM_OPCODE : uint8_t {
   G5_GLUCOSE_RESPONSE_MSG = 0x31,
   G6_GLUCOSE_MSG = 0x4E,
   G6_GLUCOSE_RESPONSE_MSG = 0x4F,
-  KEEP_ALIVE_RESPONSE = 0xFF,
+  INVALID_RESPONSE = 0xFF,
 };
 
 enum class DEXCOM_BT_CHANNEL : uint8_t {
@@ -239,16 +240,15 @@ struct AUTH_FINISH_MSG {  // NOLINT(readability-identifier-naming,altera-struct-
 } __attribute__((packed));
 
 struct KEEP_ALIVE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
-  uint8_t unknown;      // 0x19
+  uint8_t time;
 } __attribute__((packed));
 
 struct BOND_REQUEST_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
-  uint8_t unknown;                 // 0x01
+  uint8_t unknown;                  // 0x01
 } __attribute__((packed));
 
 struct TIME_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
-  uint8_t unknown_E6;
-  uint8_t unknown_64;
+  uint16_t crc;
 } __attribute__((packed));
 
 struct TIME_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
@@ -261,13 +261,8 @@ struct TIME_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struc
 } __attribute__((packed));
 
 struct GLUCOSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
-                      // G5 - 0x53
-                      // G6 - 0x0A
-  uint8_t unknown_A;
 
-  // G5 - 0x36
-  // G6 - 0xA9
-  uint8_t unknown_B;
+  uint16_t crc;
 } __attribute__((packed));
 
 struct GLUCOSE_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
@@ -284,11 +279,9 @@ struct GLUCOSE_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-st
   uint16_t crc;
 } __attribute__((packed));
 
-struct KEEP_ALIVE_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
-  // 0x06
-  uint8_t a;
-  // 0x01
-  uint8_t b;
+struct INVALID_RESPONSE_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
+  uint8_t opcode;
+  uint8_t msg_length;
 } __attribute__((packed));
 
 struct DEXCOM_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-align)
@@ -304,7 +297,7 @@ struct DEXCOM_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-
     TIME_RESPONSE_MSG time_response;
     GLUCOSE_MSG glucose_msg;
     GLUCOSE_RESPONSE_MSG glucose_response_msg;
-    KEEP_ALIVE_RESPONSE_MSG keep_alive_response;
+    INVALID_RESPONSE_MSG invalid_response;
   };
 } __attribute__((packed));
 

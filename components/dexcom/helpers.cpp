@@ -3,7 +3,7 @@
 namespace esphome {
 namespace dexcom {
 
-const uint16_t crc_xmodem(const uint8_t *data, const uint8_t len) {
+uint16_t crc_xmodem(const uint8_t *data, const uint8_t len) {
   uint16_t crc;
   for (int j = 0; j < len; j++) {
     crc = crc ^ (data[j] << 8);

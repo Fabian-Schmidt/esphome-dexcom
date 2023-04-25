@@ -74,8 +74,7 @@ void Dexcom::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc
           } else if (param->write.handle == this->handle_control_desc_) {
             DEXCOM_MSG response;
             response.opcode = DEXCOM_OPCODE::TIME;
-            response.time.unknown_E6 = 0xE6;
-            response.time.unknown_64 = 0x64;
+            response.time.crc = crc_xmodem(&response, 1 + sizeof(TIME_MSG));
             this->write_handle_(this->handle_control_, (uint8_t *) &response, 1 + sizeof(TIME_MSG));
           }
         }
@@ -127,9 +126,9 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
           if (dexcom_msg->auth_finish_msg.auth == DEXCOM_AUTH_RESULT::AUTHENTICATED) {
             if (dexcom_msg->auth_finish_msg.bond == DEXCOM_BOND_REQUEST::BONDING) {
               // Request bonding
-              response.opcode = DEXCOM_OPCODE::KEEP_ALIVE;
-              response.keep_alive.unknown = 0x19;
-              this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(KEEP_ALIVE_MSG));
+              //response.opcode = DEXCOM_OPCODE::KEEP_ALIVE;
+              //response.keep_alive.time = 10;
+              //this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(KEEP_ALIVE_MSG));
 
               response.opcode = DEXCOM_OPCODE::BOND_REQUEST;
               this->write_handle_(handle, (uint8_t *) &response, 1);
@@ -147,8 +146,10 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
                    dexcom_msg->bond_request_response_msg.unknown);
         }
         break;
-      case DEXCOM_OPCODE::KEEP_ALIVE_RESPONSE:
-        if (value_len == (1 + sizeof(KEEP_ALIVE_RESPONSE_MSG))) {
+      case DEXCOM_OPCODE::INVALID_RESPONSE:
+        if (value_len == (1 + sizeof(INVALID_RESPONSE_MSG))) {
+          ESP_LOGW(TAG, "[%s] Invalid message %u len: %u", this->get_name().c_str(), dexcom_msg->invalid_response.opcode,
+                   dexcom_msg->invalid_response.msg_length);
         }
         break;
 
@@ -183,8 +184,7 @@ void Dexcom::read_incomming_msg_(const uint16_t handle, uint8_t *value, const ui
             }
 
             response.opcode = DEXCOM_OPCODE::G6_GLUCOSE_MSG;
-            response.glucose_msg.unknown_A = 0x0A;
-            response.glucose_msg.unknown_B = 0xA9;
+            response.glucose_msg.crc = crc_xmodem(&response, 1 + sizeof(GLUCOSE_MSG));
             this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(GLUCOSE_MSG));
           }
         }
@@ -343,21 +343,21 @@ std::array<uint8_t, 8> Dexcom::encrypt_(const std::array<uint8_t, 8> data) {
   esp_aes_init(&ctx);
 
   const std::array<uint8_t, 16> key{'0',
-                                     '0',
-                                     this->transmitter_id_[0],
-                                     this->transmitter_id_[1],
-                                     this->transmitter_id_[2],
-                                     this->transmitter_id_[3],
-                                     this->transmitter_id_[4],
-                                     this->transmitter_id_[5],
-                                     '0',
-                                     '0',
-                                     this->transmitter_id_[0],
-                                     this->transmitter_id_[1],
-                                     this->transmitter_id_[2],
-                                     this->transmitter_id_[3],
-                                     this->transmitter_id_[4],
-                                     this->transmitter_id_[5]};
+                                    '0',
+                                    this->transmitter_id_[0],
+                                    this->transmitter_id_[1],
+                                    this->transmitter_id_[2],
+                                    this->transmitter_id_[3],
+                                    this->transmitter_id_[4],
+                                    this->transmitter_id_[5],
+                                    '0',
+                                    '0',
+                                    this->transmitter_id_[0],
+                                    this->transmitter_id_[1],
+                                    this->transmitter_id_[2],
+                                    this->transmitter_id_[3],
+                                    this->transmitter_id_[4],
+                                    this->transmitter_id_[5]};
 
   auto status = esp_aes_setkey(&ctx, key.data(), key.size() * 8);
   if (status != 0) {
