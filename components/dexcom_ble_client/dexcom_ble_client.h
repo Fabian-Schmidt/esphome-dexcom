@@ -62,7 +62,10 @@ class DexcomBLEClient : public esp32_ble_client::BLEClientBase {
 
   void set_state(esp32_ble_tracker::ClientState state) override;
 
-  void set_transmitter_id(const char *val) { this->transmitter_id_ = val; }
+  void set_transmitter_id(const char *val) { 
+    this->transmitter_id_ = val;
+    this->transmitter_name_ = "Dexcom" + val[4] + val[5];
+     }
   void set_use_alternative_bt_channel(bool val) { this->use_alternative_bt_channel_ = val; }
 
   void add_on_message_callback(std::function<void(const TIME_RESPONSE_MSG *, const GLUCOSE_RESPONSE_MSG *)> callback) {
@@ -82,6 +85,7 @@ class DexcomBLEClient : public esp32_ble_client::BLEClientBase {
   const char *get_name_c_str_();
 
   const char *transmitter_id_;
+  std::string transmitter_name_;
   bool use_alternative_bt_channel_ = false;
   esp32_ble_tracker::ClientState node_state;
   CallbackManager<void(const TIME_RESPONSE_MSG *, const GLUCOSE_RESPONSE_MSG *)> on_message_callback_{};
