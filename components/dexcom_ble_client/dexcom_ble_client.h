@@ -94,6 +94,7 @@ class DexcomBLEClient : public esp32_ble_client::BLEClientBase {
   uint16_t handle_authentication_desc_ = 0;
   uint16_t handle_backfill_ = 0;
 
+  uint32_t last_sensor_submit_ = 0;
   bool got_valid_msg_ = false;
   TIME_RESPONSE_MSG time_msg_{};
   GLUCOSE_RESPONSE_MSG glucose_msg_{};

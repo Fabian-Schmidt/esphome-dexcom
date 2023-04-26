@@ -61,6 +61,14 @@ bool DexcomBLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
     // Save dexcom transmitter mac for future.
     // this->address_ =
   }
+
+  if (this->last_sensor_submit_ > 0) {
+    if (this->last_sensor_submit_ + 30 /*seconds*/ * 1000 > millis()) {
+      // Wait at least 30 seconds before trying to read new value.
+      return false;
+    }
+  }
+
   return false;
 
   return esp32_ble_client::BLEClientBase::parse_device(device);
@@ -316,6 +324,7 @@ void DexcomBLEClient::submit_value_to_sensors_() {
   if (this->got_valid_msg_) {
     this->on_message_callback_.call(&this->time_msg_, &this->glucose_msg_);
     this->reset_state_();
+    this->last_sensor_submit_ = millis();
   }
 }
 
