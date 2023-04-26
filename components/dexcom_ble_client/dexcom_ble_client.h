@@ -64,7 +64,9 @@ class DexcomBLEClient : public esp32_ble_client::BLEClientBase {
 
   void set_transmitter_id(const char *val) { 
     this->transmitter_id_ = val;
-    this->transmitter_name_ = "Dexcom" + val[4] + val[5];
+    this->transmitter_name_ = "Dexcom";
+    this->transmitter_name_ += val[4];
+    this->transmitter_name_ += val[5];
      }
   void set_use_alternative_bt_channel(bool val) { this->use_alternative_bt_channel_ = val; }
 
