@@ -3,7 +3,7 @@
 #include "esphome/core/datatypes.h"
 
 namespace esphome {
-namespace dexcom {
+namespace dexcom_ble_client {
 
 enum class DEXCOM_OPCODE : uint8_t {
   UNKNOWN = 0x00,
@@ -301,5 +301,5 @@ struct DEXCOM_MSG {  // NOLINT(readability-identifier-naming,altera-struct-pack-
   };
 } __attribute__((packed));
 
-}  // namespace dexcom
+}  // namespace dexcom_ble_client
 }  // namespace esphome

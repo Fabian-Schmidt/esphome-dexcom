@@ -25,39 +25,49 @@ esp32_ble_tracker:
   scan_parameters:
     interval: 10ms
     window: 10ms
-    active: true
+    active: true # Necessary?
 
-esp32_ble:
-
-ble_client:
-  - mac_address: ${mac_address}
-    id: dexcom_ble_client_id
+dexcom_ble_client:
+  id: dexcom_ble_client_id
+  transmitter_id: ${transmitter_id}
+  use_alternative_bt_channel: ${use_alternative_bt_channel}
+  # mac_address: ${mac_address}
+  # on_disconnect:
 
 sensor:
-  - platform: dexcom
-    ble_client_id: dexcom_ble_client_id
-    transmitter_id: ${transmitter_id}
-    use_alternative_bt_channel: ${use_alternative_bt_channel}
-    glucose_in_mg_dl:
-      name: Glucose in mg/dl
-      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
-    glucose_in_mmol_l:
-      name: Glucose in mmol/l
-      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
-    trend:
-      name: Trend
-      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
-    glucose_predict_in_mg_dl:
-      name: Glucose predict in mg/dl
-      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
-    glucose_predict_in_mmol_l:
-      name: Glucose predict in mmol/l
-      # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
-    sensor_age:
-      name: Sensor age
-    sensor_session_age:
-      name: Sensor session age
-    sensor_remaining_lifetime:
-      name: Sensor remaining lifetime
-    sensor_session_remaining_lifetime:
-      name: Sensor session remaining lifetime
+  - platform: dexcom_ble_client
+    type: GLUCOSE_IN_MG_DL
+    name: Glucose in mg/dl
+    # expire_after: 10.5min # if using mqtt recommendation to set `expire_after` option.
+  - platform: dexcom_ble_client
+    type: GLUCOSE_IN_MMOL_L
+    name: Glucose in mmol/l
+  - platform: dexcom_ble_client
+    type: GLUCOSE_TREND
+    name: Glucose trend
+  - platform: dexcom_ble_client
+    type: GLUCOSE_PREDICT_IN_MG_DL
+    name: Glucose predict in mg/dl
+  - platform: dexcom_ble_client
+    type: GLUCOSE_PREDICT_IN_MMOL_L
+    name: Glucose predict in mmol/l
+  - platform: dexcom_ble_client
+    type: SENSOR_AGE
+    name: Sensor age
+  - platform: dexcom_ble_client
+    type: SENSOR_SESSION_AGE
+    name: Sensor session age
+  - platform: dexcom_ble_client
+    type: SENSOR_REMAINING_LIFETIME
+    name: Sensor remaining lifetime
+  - platform: dexcom_ble_client
+    type: SENSOR_SESSION_REMAINING_LIFETIME
+    name: Sensor session remaining lifetime
+
+text_sensor:
+  - platform: dexcom_ble_client
+    type: STATUS
+    name: Status
+  - platform: dexcom_ble_client
+    type: CALIBRATION_STATE
+    name: Calibration state

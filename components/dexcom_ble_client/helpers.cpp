@@ -1,7 +1,7 @@
 #include "helpers.h"
 
 namespace esphome {
-namespace dexcom {
+namespace dexcom_ble_client {
 
 uint16_t crc_xmodem(const uint8_t *data, const uint8_t len) {
   uint16_t crc;
@@ -17,5 +17,5 @@ uint16_t crc_xmodem(const uint8_t *data, const uint8_t len) {
   return crc;
 }
 
-}  // namespace dexcom
+}  // namespace dexcom_ble_client
 }  // namespace esphome
