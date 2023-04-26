@@ -19,13 +19,10 @@ static const char *enum_to_c_str(const DEXCOM_TEXT_SENSOR_TYPE val) {
   switch (val) {
     case DEXCOM_TEXT_SENSOR_TYPE::STATUS:
       return "STATUS";
-      break;
     case DEXCOM_TEXT_SENSOR_TYPE::CALIBRATION_STATE:
       return "CALIBRATION_STATE";
-      break;
     default:
       return "UNSET";
-      break;
   }
 }
 #endif  // ESPHOME_LOG_HAS_CONFIG

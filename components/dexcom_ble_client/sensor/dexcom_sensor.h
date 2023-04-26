@@ -30,34 +30,24 @@ static const char *enum_to_c_str(const DEXCOM_SENSOR_TYPE val) {
   switch (val) {
     case DEXCOM_SENSOR_TYPE::GLUCOSE_IN_MG_DL:
       return "GLUCOSE_IN_MG_DL";
-      break;
     case DEXCOM_SENSOR_TYPE::GLUCOSE_IN_MMOL_L:
       return "GLUCOSE_IN_MMOL_L";
-      break;
     case DEXCOM_SENSOR_TYPE::GLUCOSE_TREND:
       return "GLUCOSE_TREND";
-      break;
     case DEXCOM_SENSOR_TYPE::GLUCOSE_PREDICT_IN_MG_DL:
       return "GLUCOSE_PREDICT_IN_MG_DL";
-      break;
     case DEXCOM_SENSOR_TYPE::GLUCOSE_PREDICT_IN_MMOL_L:
       return "GLUCOSE_PREDICT_IN_MMOL_L";
-      break;
     case DEXCOM_SENSOR_TYPE::SENSOR_AGE:
       return "SENSOR_AGE";
-      break;
     case DEXCOM_SENSOR_TYPE::SENSOR_SESSION_AGE:
       return "SENSOR_SESSION_AGE";
-      break;
     case DEXCOM_SENSOR_TYPE::SENSOR_REMAINING_LIFETIME:
       return "SENSOR_REMAINING_LIFETIME";
-      break;
     case DEXCOM_SENSOR_TYPE::SENSOR_SESSION_REMAINING_LIFETIME:
       return "SENSOR_SESSION_REMAINING_LIFETIME";
-      break;
     default:
       return "UNSET";
-      break;
   }
 }
 #endif  // ESPHOME_LOG_HAS_CONFIG

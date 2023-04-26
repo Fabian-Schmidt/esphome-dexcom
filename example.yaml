@@ -71,3 +71,20 @@ text_sensor:
   - platform: dexcom_ble_client
     type: CALIBRATION_STATE
     name: Calibration state
+
+binary_sensor:
+  - platform: dexcom_ble_client
+    type: SENSOR_LOW_BATTERY
+    name: Sensor low battery
+  - platform: dexcom_ble_client
+    type: SENSOR_OKAY
+    name: Sensor okay
+  - platform: dexcom_ble_client
+    type: SENSOR_FAILED
+    name: Sensor failed
+  - platform: dexcom_ble_client
+    type: SENSOR_STOPPED
+    name: Sensor stopped
+  - platform: dexcom_ble_client
+    type: SENSOR_TRANSITIONAL
+    name: Sensor transitional
