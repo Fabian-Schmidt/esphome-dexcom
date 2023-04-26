@@ -72,7 +72,8 @@ bool DexcomBLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
       }
     }
 
-    ESP_LOGI(TAG, "Found Dexcom device '%s' with mac address %s", this->transmitter_id_, device.address_str().c_str());
+    ESP_LOGI(TAG, "Found Dexcom device '%s' with mac address [%s]", this->transmitter_id_,
+             device.address_str().c_str());
     // Save dexcom transmitter mac for future.
     this->set_address(device.address_uint64());
   }
@@ -111,13 +112,13 @@ bool DexcomBLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
     switch (event) {
       case ESP_GATTC_OPEN_EVT:
         if (param->open.status == ESP_GATT_OK) {
-          ESP_LOGI(TAG, "[%s] Connected successfully", this->get_name_c_str_());
+          ESP_LOGD(TAG, "[%s] Connected successfully", this->get_name_c_str_());
           this->reset_state_();
         }
         break;
 
       case ESP_GATTC_DISCONNECT_EVT:
-        ESP_LOGI(TAG, "[%s] Disconnected", this->get_name_c_str_());
+        ESP_LOGD(TAG, "[%s] Disconnected", this->get_name_c_str_());
         this->submit_value_to_sensors_();
         break;
 
@@ -268,14 +269,16 @@ void DexcomBLEClient::read_incomming_msg_(const uint16_t handle, uint8_t *value,
           const uint16_t crc = crc_xmodem(value, (1 + sizeof(TIME_RESPONSE_MSG)) - 2);
           if (dexcom_msg->time_response.crc != crc) {
             ESP_LOGW(TAG, "Time - CRC error");
-          } else if (!enum_value_okay(dexcom_msg->time_response.status)) {
-            ESP_LOGW(TAG, "Time - Status: %s", enum_to_c_str(dexcom_msg->time_response.status));
           } else {
             this->time_msg_ = dexcom_msg->time_response;
 
-            ESP_LOGI(TAG, "Time - Status:           %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
-                     dexcom_msg->time_response.status);
-
+            if (!enum_value_okay(dexcom_msg->time_response.status)) {
+              ESP_LOGW(TAG, "Time - Status:           %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
+                       dexcom_msg->time_response.status);
+            } else {
+              ESP_LOGD(TAG, "Time - Status:           %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
+                       dexcom_msg->time_response.status);
+            }
             ESP_LOGI(TAG, "Time - Since activation: %d (%d days, %d hours)", dexcom_msg->time_response.currentTime,
                      dexcom_msg->time_response.currentTime / (60 * 60 * 24),     // Days round down
                      (dexcom_msg->time_response.currentTime / (60 * 60)) % 24);  // Remaining hours
@@ -301,23 +304,32 @@ void DexcomBLEClient::read_incomming_msg_(const uint16_t handle, uint8_t *value,
           const uint16_t crc = crc_xmodem(value, (1 + sizeof(GLUCOSE_RESPONSE_MSG)) - 2);
           if (dexcom_msg->glucose_response_msg.crc != crc) {
             ESP_LOGW(TAG, "Glucose - CRC error");
-          } else if (!enum_value_okay(dexcom_msg->glucose_response_msg.status)) {
-            ESP_LOGW(TAG, "Glucose - Status: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.status));
-          } else if (!enum_value_okay(dexcom_msg->glucose_response_msg.state)) {
-            ESP_LOGW(TAG, "Glucose - State: %s", enum_to_c_str(dexcom_msg->glucose_response_msg.state));
           } else {
             this->glucose_msg_ = dexcom_msg->glucose_response_msg;
             this->got_valid_msg_ = true;
 
-            ESP_LOGI(TAG, "Glucose - Status:          %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.status),
-                     dexcom_msg->glucose_response_msg.status);
+            if (!enum_value_okay(dexcom_msg->glucose_response_msg.status)) {
+              ESP_LOGW(TAG, "Glucose - Status:          %s (%u)",
+                       enum_to_c_str(dexcom_msg->glucose_response_msg.status), dexcom_msg->glucose_response_msg.status);
+            } else {
+              ESP_LOGI(TAG, "Glucose - Status:          %s (%u)",
+                       enum_to_c_str(dexcom_msg->glucose_response_msg.status), dexcom_msg->glucose_response_msg.status);
+            }
+
             ESP_LOGD(TAG, "Glucose - Sequence:        %u", dexcom_msg->glucose_response_msg.sequence);
-            ESP_LOGI(TAG, "Glucose - Timestamp:       %u", dexcom_msg->glucose_response_msg.timestamp);
+            ESP_LOGD(TAG, "Glucose - Timestamp:       %u", dexcom_msg->glucose_response_msg.timestamp);
             ESP_LOGI(TAG, "Glucose - Glucose:         %u", dexcom_msg->glucose_response_msg.glucose);
-            ESP_LOGI(TAG, "Glucose - DisplayOnly:     %s",
+            ESP_LOGD(TAG, "Glucose - DisplayOnly:     %s",
                      YESNO(dexcom_msg->glucose_response_msg.glucoseIsDisplayOnly));
-            ESP_LOGI(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.state),
-                     dexcom_msg->glucose_response_msg.state);
+
+            if (!enum_value_okay(dexcom_msg->glucose_response_msg.state)) {
+              ESP_LOGW(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.state),
+                       dexcom_msg->glucose_response_msg.state);
+            } else {
+              ESP_LOGI(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.state),
+                       dexcom_msg->glucose_response_msg.state);
+            }
+
             ESP_LOGI(TAG, "Glucose - Trend:           %i", dexcom_msg->glucose_response_msg.trend);
             ESP_LOGI(TAG, "Glucose - Glucose predict: %u", dexcom_msg->glucose_response_msg.predicted_glucose);
           }
@@ -505,7 +517,7 @@ bool DexcomBLEClient::node_established_() {
 
 const char *DexcomBLEClient::get_name_c_str_() {
   if (this->address_ != 0) {
-    return this->address_str().c_str();
+    return this->address_str_.c_str();
   } else {
     return this->transmitter_id_;
   }
