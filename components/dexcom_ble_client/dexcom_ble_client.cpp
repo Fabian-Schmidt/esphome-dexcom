@@ -21,7 +21,7 @@ void DexcomBLEClient::loop() { esp32_ble_client::BLEClientBase::loop(); }
 void DexcomBLEClient::dump_config() {
   ESP_LOGCONFIG(TAG, "Dexcom BLE Client:");
   ESP_LOGCONFIG(TAG, "  Transmitter id: %s", this->transmitter_id_);
-  ESP_LOGCONFIG(TAG, "  Transmitter name: %s", this->transmitter_name_);
+  ESP_LOGCONFIG(TAG, "  Transmitter name: %s", this->transmitter_name_.c_str());
 
   ESP_LOGCONFIG(TAG, "  Use Alternative BT Channel: %s", YESNO(this->use_alternative_bt_channel_));
   if (this->address_ != 0)
