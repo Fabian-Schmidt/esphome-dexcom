@@ -9,7 +9,7 @@ namespace dexcom_ble_client {
 static const char *const TAG = "dexcom_ble_client";
 
 static const uint16_t ADVERTISE_SERVICE_UUID = 0xFEBC;
-static const uint16_t ADVERTISE_MANUFACTURER_ID = 0x0000;
+static const uint16_t ADVERTISE_MANUFACTURER_ID = 0x00D0;  // Dexcom, Inc.
 
 void DexcomBLEClient::setup() {
   esp32_ble_client::BLEClientBase::setup();
@@ -22,7 +22,6 @@ void DexcomBLEClient::dump_config() {
   ESP_LOGCONFIG(TAG, "Dexcom BLE Client:");
   ESP_LOGCONFIG(TAG, "  Transmitter id: %s", this->transmitter_id_);
   ESP_LOGCONFIG(TAG, "  Transmitter name: %s", this->transmitter_name_.c_str());
-
   ESP_LOGCONFIG(TAG, "  Use Alternative BT Channel: %s", YESNO(this->use_alternative_bt_channel_));
   if (this->address_ != 0)
     ESP_LOGCONFIG(TAG, "  Address: %s", this->address_str().c_str());
@@ -34,30 +33,10 @@ bool DexcomBLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   }
 
   if (this->address_ == 0) {
-    // No Mac address configured. Use `transmitter_id_` to find device.
+    // No Mac address configured. Use `ADVERTISE_SERVICE_UUID`, `ADVERTISE_MANUFACTURER_ID` and `transmitter_id_` to
+    // find device.
 
-    {
-      const auto name = device.get_name();
-      if (name.empty() || name.length() != 8) {
-        return false;
-      }
-      ESP_LOGV(TAG, "Found possible Dexcom device: %s", name.c_str());
-      if (name != this->transmitter_name_) {
-        return false;
-      }
-    }
-    ESP_LOGV(TAG, "get_service_uuids().size(): %i", device.get_service_uuids().size());
-    ESP_LOGV(TAG, "get_manufacturer_datas().size(): %i", device.get_manufacturer_datas().size());
-
-    for (auto &uuid : device.get_service_uuids()) {
-      ESP_LOGV(TAG, "  Service UUID: %s", uuid.to_string().c_str());
-    }
-
-    for (auto &data : device.get_manufacturer_datas()) {
-      ESP_LOGV(TAG, "  Manufacturer UUID: %s", data.uuid.to_string().c_str());
-      ESP_LOGV(TAG, "  Manufacturer data: %s", format_hex_pretty(data.data).c_str());
-    }
-
+    // Validate ADVERTISE_SERVICE_UUID
     {
       const auto &service_uuids = device.get_service_uuids();
       if (service_uuids.size() == 0) {
@@ -69,11 +48,33 @@ bool DexcomBLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
       }
     }
 
+    // Validate ADVERTISE_MANUFACTURER_ID
+    {
+      const auto &manu_datas = device.get_manufacturer_datas();
+      if (manu_datas.size() == 0) {
+        return false;
+      }
+      const auto &manu_data = manu_datas[0];
+      if (manu_data.uuid != esp32_ble_tracker::ESPBTUUID::from_uint16(ADVERTISE_MANUFACTURER_ID)) {
+        return false;
+      }
+    }
+
+    // Validate transmitter_id_
+    {
+      const auto name = device.get_name();
+      if (name.empty() || name.length() != 8) {
+        return false;
+      }
+      ESP_LOGV(TAG, "Found Dexcom device: %s", name.c_str());
+      if (name != this->transmitter_name_) {
+        return false;
+      }
+    }
+
     ESP_LOGI(TAG, "Found Dexcom device '%s' with mac address %s", this->transmitter_id_, device.address_str().c_str());
     // Save dexcom transmitter mac for future.
     this->set_address(device.address_uint64());
-
-    
   }
 
   if (this->last_sensor_submit_ > 0) {
@@ -82,8 +83,6 @@ bool DexcomBLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
       return false;
     }
   }
-
-  return false;
 
   return esp32_ble_client::BLEClientBase::parse_device(device);
 }
