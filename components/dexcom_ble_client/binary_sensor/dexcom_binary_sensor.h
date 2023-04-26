@@ -17,8 +17,7 @@ enum class DEXCOM_BINARY_SENSOR_TYPE {
   SENSOR_TRANSITIONAL,
 };
 
-#ifdef ESPHOME_LOG_HAS_CONFIG
-static const char *enum_to_c_str(const DEXCOM_BINARY_SENSOR_TYPE val) {
+inline static const char *enum_to_c_str(const DEXCOM_BINARY_SENSOR_TYPE val) {
   switch (val) {
     case DEXCOM_BINARY_SENSOR_TYPE::SENSOR_LOW_BATTERY:
       return "SENSOR_LOW_BATTERY";
@@ -34,7 +33,6 @@ static const char *enum_to_c_str(const DEXCOM_BINARY_SENSOR_TYPE val) {
       return "UNSET";
   }
 }
-#endif  // ESPHOME_LOG_HAS_CONFIG
 
 class DexcomBinarySensor : public Component, public binary_sensor::BinarySensor, public Parented<DexcomBLEClient> {
  public:

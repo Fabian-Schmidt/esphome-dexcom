@@ -25,8 +25,7 @@ enum class DEXCOM_SENSOR_TYPE {
   SENSOR_SESSION_REMAINING_LIFETIME,
 };
 
-#ifdef ESPHOME_LOG_HAS_CONFIG
-static const char *enum_to_c_str(const DEXCOM_SENSOR_TYPE val) {
+inline static const char *enum_to_c_str(const DEXCOM_SENSOR_TYPE val) {
   switch (val) {
     case DEXCOM_SENSOR_TYPE::GLUCOSE_IN_MG_DL:
       return "GLUCOSE_IN_MG_DL";
@@ -50,7 +49,6 @@ static const char *enum_to_c_str(const DEXCOM_SENSOR_TYPE val) {
       return "UNSET";
   }
 }
-#endif  // ESPHOME_LOG_HAS_CONFIG
 
 class DexcomSensor : public Component, public sensor::Sensor, public Parented<DexcomBLEClient> {
  public:

@@ -36,7 +36,7 @@ enum class DEXCOM_AUTH_RESULT : uint8_t {
   NOT_AUTHENTICATED = 0x02,
 };
 
-static const char *enum_to_c_str(const DEXCOM_AUTH_RESULT val) {
+inline static const char *enum_to_c_str(const DEXCOM_AUTH_RESULT val) {
   switch (val) {
     case DEXCOM_AUTH_RESULT::AUTHENTICATED:
       return "AUTHENTICATED";
@@ -53,7 +53,7 @@ enum class DEXCOM_BOND_REQUEST : uint8_t {
   BONDING = 0x02,
 };
 
-static const char *enum_to_c_str(const DEXCOM_BOND_REQUEST val) {
+inline static const char *enum_to_c_str(const DEXCOM_BOND_REQUEST val) {
   switch (val) {
     case DEXCOM_BOND_REQUEST::NO_BONDING:
       return "NO_BONDING";
@@ -71,7 +71,7 @@ enum class DEXCOM_TRANSMITTER_STATUS : uint8_t {
   // BRICKED
 };
 
-static const bool enum_value_okay(const DEXCOM_TRANSMITTER_STATUS val) {
+inline static bool enum_value_okay(const DEXCOM_TRANSMITTER_STATUS val) {
   switch (val) {
     case DEXCOM_TRANSMITTER_STATUS::OKAY:
     case DEXCOM_TRANSMITTER_STATUS::LOW_BATTERY:
@@ -81,7 +81,7 @@ static const bool enum_value_okay(const DEXCOM_TRANSMITTER_STATUS val) {
   }
 }
 
-static const char *enum_to_c_str(const DEXCOM_TRANSMITTER_STATUS val) {
+inline static const char *enum_to_c_str(const DEXCOM_TRANSMITTER_STATUS val) {
   switch (val) {
     case DEXCOM_TRANSMITTER_STATUS::OKAY:
       return "Okay";
@@ -137,7 +137,7 @@ enum class DEXCOM_CALIBRATION_STATE : uint8_t {
   CALIBRATION_SENT = 0xC3,
 };
 
-static const bool enum_value_okay(const DEXCOM_CALIBRATION_STATE val) {
+inline static bool enum_value_okay(const DEXCOM_CALIBRATION_STATE val) {
   switch (val) {
     case DEXCOM_CALIBRATION_STATE::OKAY:
     case DEXCOM_CALIBRATION_STATE::NEEDS_CALIBRATION:
@@ -147,7 +147,7 @@ static const bool enum_value_okay(const DEXCOM_CALIBRATION_STATE val) {
   }
 }
 
-static const char *enum_to_c_str(const DEXCOM_CALIBRATION_STATE val) {
+inline static const char *enum_to_c_str(const DEXCOM_CALIBRATION_STATE val) {
   switch (val) {
     case DEXCOM_CALIBRATION_STATE::STOPPED:
       return "Stopped";

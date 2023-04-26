@@ -4,7 +4,7 @@ substitutions:
   use_alternative_bt_channel: "False"
 
 esphome:
-  name: "dexcom-example"
+  name: "dexcom-example-idf"
 
 external_components:
   - source: github://Fabian-Schmidt/esphome-dexcom
@@ -15,6 +15,8 @@ external_components:
 
 esp32:
   board: esp32dev
+  framework:
+    type: esp-idf
 
 logger:
   # level: VERBOSE

@@ -141,7 +141,8 @@ bool DexcomBLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
 
         this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
                                BT_NOTIFICATION_TYPE::INDICATION);
-
+        break;
+        
       case ESP_GATTC_NOTIFY_EVT:
         ESP_LOGD(TAG, "[%s] Notify to handle 0x%04x is %s, data=%s", this->get_name_c_str_(), param->notify.handle,
                  param->notify.is_notify ? "notify" : "indicate",
@@ -274,10 +275,10 @@ void DexcomBLEClient::read_incomming_msg_(const uint16_t handle, uint8_t *value,
 
             if (!enum_value_okay(dexcom_msg->time_response.status)) {
               ESP_LOGW(TAG, "Time - Status:           %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
-                       dexcom_msg->time_response.status);
+                       (uint8_t) dexcom_msg->time_response.status);
             } else {
               ESP_LOGD(TAG, "Time - Status:           %s (%u)", enum_to_c_str(dexcom_msg->time_response.status),
-                       dexcom_msg->time_response.status);
+                       (uint8_t) dexcom_msg->time_response.status);
             }
             ESP_LOGI(TAG, "Time - Since activation: %d (%d days, %d hours)", dexcom_msg->time_response.currentTime,
                      dexcom_msg->time_response.currentTime / (60 * 60 * 24),     // Days round down
@@ -310,10 +311,12 @@ void DexcomBLEClient::read_incomming_msg_(const uint16_t handle, uint8_t *value,
 
             if (!enum_value_okay(dexcom_msg->glucose_response_msg.status)) {
               ESP_LOGW(TAG, "Glucose - Status:          %s (%u)",
-                       enum_to_c_str(dexcom_msg->glucose_response_msg.status), dexcom_msg->glucose_response_msg.status);
+                       enum_to_c_str(dexcom_msg->glucose_response_msg.status),
+                       (uint8_t) dexcom_msg->glucose_response_msg.status);
             } else {
               ESP_LOGI(TAG, "Glucose - Status:          %s (%u)",
-                       enum_to_c_str(dexcom_msg->glucose_response_msg.status), dexcom_msg->glucose_response_msg.status);
+                       enum_to_c_str(dexcom_msg->glucose_response_msg.status),
+                       (uint8_t) dexcom_msg->glucose_response_msg.status);
             }
 
             ESP_LOGD(TAG, "Glucose - Sequence:        %u", dexcom_msg->glucose_response_msg.sequence);
@@ -324,10 +327,10 @@ void DexcomBLEClient::read_incomming_msg_(const uint16_t handle, uint8_t *value,
 
             if (!enum_value_okay(dexcom_msg->glucose_response_msg.state)) {
               ESP_LOGW(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.state),
-                       dexcom_msg->glucose_response_msg.state);
+                       (uint8_t) dexcom_msg->glucose_response_msg.state);
             } else {
               ESP_LOGI(TAG, "Glucose - State:           %s (%u)", enum_to_c_str(dexcom_msg->glucose_response_msg.state),
-                       dexcom_msg->glucose_response_msg.state);
+                       (uint8_t) dexcom_msg->glucose_response_msg.state);
             }
 
             ESP_LOGI(TAG, "Glucose - Trend:           %i", dexcom_msg->glucose_response_msg.trend);
