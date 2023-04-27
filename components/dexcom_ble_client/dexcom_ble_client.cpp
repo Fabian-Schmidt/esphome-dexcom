@@ -22,6 +22,7 @@ void DexcomBLEClient::dump_config() {
   ESP_LOGCONFIG(TAG, "Dexcom BLE Client:");
   ESP_LOGCONFIG(TAG, "  Transmitter id: %s", this->transmitter_id_);
   ESP_LOGCONFIG(TAG, "  Transmitter name: %s", this->transmitter_name_.c_str());
+  ESP_LOGCONFIG(TAG, "  Transmitter model: %s", enum_to_c_str(this->transmitter_model));
   ESP_LOGCONFIG(TAG, "  Use Alternative BT Channel: %s", YESNO(this->use_alternative_bt_channel_));
   if (this->address_ != 0)
     ESP_LOGCONFIG(TAG, "  Address: %s", this->address_str().c_str());
@@ -142,7 +143,7 @@ bool DexcomBLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
         this->register_notify_(this->handle_authentication_, this->handle_authentication_desc_,
                                BT_NOTIFICATION_TYPE::INDICATION);
         break;
-        
+
       case ESP_GATTC_NOTIFY_EVT:
         ESP_LOGD(TAG, "[%s] Notify to handle 0x%04x is %s, data=%s", this->get_name_c_str_(), param->notify.handle,
                  param->notify.is_notify ? "notify" : "indicate",
@@ -294,12 +295,24 @@ void DexcomBLEClient::read_incomming_msg_(const uint16_t handle, uint8_t *value,
               ESP_LOGW(TAG, "Time - Low Battery");
             }
 
-            response.opcode = DEXCOM_OPCODE::G6_GLUCOSE_MSG;
-            response.glucose_msg.crc = crc_xmodem(&response, 1 + sizeof(GLUCOSE_MSG));
-            this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(GLUCOSE_MSG));
+            switch (this->transmitter_model) {
+              case DEXCOM_MODEL::MODEL_G5:
+                response.opcode = DEXCOM_OPCODE::G5_GLUCOSE_MSG;
+                response.glucose_msg.crc = crc_xmodem(&response, 1 + sizeof(GLUCOSE_MSG));
+                this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(GLUCOSE_MSG));
+                break;
+              case DEXCOM_MODEL::MODEL_G6:
+                response.opcode = DEXCOM_OPCODE::G6_GLUCOSE_MSG;
+                response.glucose_msg.crc = crc_xmodem(&response, 1 + sizeof(GLUCOSE_MSG));
+                this->write_handle_(handle, (uint8_t *) &response, 1 + sizeof(GLUCOSE_MSG));
+                break;
+              default:
+                break;
+            }
           }
         }
         break;
+      case DEXCOM_OPCODE::G5_GLUCOSE_RESPONSE_MSG:
       case DEXCOM_OPCODE::G6_GLUCOSE_RESPONSE_MSG:
         if (value_len >= (1 + sizeof(GLUCOSE_RESPONSE_MSG))) {
           const uint16_t crc = crc_xmodem(value, (1 + sizeof(GLUCOSE_RESPONSE_MSG)) - 2);

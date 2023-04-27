@@ -5,6 +5,23 @@
 namespace esphome {
 namespace dexcom_ble_client {
 
+enum class DEXCOM_MODEL : uint8_t {
+  UNSET = 0x00,
+  MODEL_G5 = 0x05,
+  MODEL_G6 = 0x06,
+};
+
+inline static const char *enum_to_c_str(const DEXCOM_MODEL val) {
+  switch (val) {
+    case DEXCOM_MODEL::MODEL_G5:
+      return "MODEL_G5";
+    case DEXCOM_MODEL::MODEL_G6:
+      return "MODEL_G6";
+    default:
+      return "";
+  }
+}
+
 enum class DEXCOM_OPCODE : uint8_t {
   UNKNOWN = 0x00,
   AUTH_INIT = 0x01,
