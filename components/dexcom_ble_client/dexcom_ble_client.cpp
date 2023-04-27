@@ -16,8 +16,6 @@ void DexcomBLEClient::setup() {
   this->enabled = true;
 }
 
-void DexcomBLEClient::loop() { esp32_ble_client::BLEClientBase::loop(); }
-
 void DexcomBLEClient::dump_config() {
   ESP_LOGCONFIG(TAG, "Dexcom BLE Client:");
   ESP_LOGCONFIG(TAG, "  Transmitter id: %s", this->transmitter_id_);
@@ -121,6 +119,7 @@ bool DexcomBLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
       case ESP_GATTC_DISCONNECT_EVT:
         ESP_LOGD(TAG, "[%s] Disconnected", this->get_name_c_str_());
         this->submit_value_to_sensors_();
+        this->on_disconnect_callback_.call();
         break;
 
       case ESP_GATTC_SEARCH_CMPL_EVT:

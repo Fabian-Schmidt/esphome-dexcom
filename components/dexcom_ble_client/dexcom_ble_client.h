@@ -49,7 +49,6 @@ class DexcomBLEClient : public esp32_ble_client::BLEClientBase {
  public:
   void setup() override;
   void dump_config() override;
-  void loop() override;
 
   bool gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                            esp_ble_gattc_cb_param_t *param) override;
@@ -78,6 +77,9 @@ class DexcomBLEClient : public esp32_ble_client::BLEClientBase {
   void add_on_message_callback(std::function<void(const TIME_RESPONSE_MSG *, const GLUCOSE_RESPONSE_MSG *)> callback) {
     this->on_message_callback_.add(std::move(callback));
   }
+  void add_on_disconnect_callback(std::function<void()> callback) {
+    this->on_disconnect_callback_.add(std::move(callback));
+  }
 
  protected:
   void read_incomming_msg_(const uint16_t handle, uint8_t *value, const uint16_t value_len);
@@ -97,6 +99,7 @@ class DexcomBLEClient : public esp32_ble_client::BLEClientBase {
   bool use_alternative_bt_channel_ = false;
   esp32_ble_tracker::ClientState node_state;
   CallbackManager<void(const TIME_RESPONSE_MSG *, const GLUCOSE_RESPONSE_MSG *)> on_message_callback_{};
+  CallbackManager<void()> on_disconnect_callback_{};
 
   uint8_t register_notify_counter_ = 0;
   uint16_t handle_communication_ = 0;
