@@ -37,8 +37,8 @@ CONFIG_SCHEMA = (
 
 
 async def to_code(config):
-    var = await text_sensor.new_text_sensor(config)
+    paren = await cg.get_variable(config[CONF_DEXCOM_BLE_ID])
+    var = await text_sensor.new_text_sensor(config, paren)
     await cg.register_component(var, config)
-    await cg.register_parented(var, config[CONF_DEXCOM_BLE_ID])
 
     cg.add(var.set_type(CONF_SUPPORTED_TYPE[config[CONF_TYPE]][CONF_TYPE]))

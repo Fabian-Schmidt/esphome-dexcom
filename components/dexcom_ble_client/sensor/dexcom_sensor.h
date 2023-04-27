@@ -50,10 +50,10 @@ inline static const char *enum_to_c_str(const DEXCOM_SENSOR_TYPE val) {
   }
 }
 
-class DexcomSensor : public Component, public sensor::Sensor, public Parented<DexcomBLEClient> {
+class DexcomSensor : public Component, public sensor::Sensor {
  public:
+  explicit DexcomSensor(DexcomBLEClient *parent);
   void dump_config() override;
-  void setup() override;
 
   void set_type(DEXCOM_SENSOR_TYPE val) { this->type_ = val; }
 

@@ -34,10 +34,10 @@ inline static const char *enum_to_c_str(const DEXCOM_BINARY_SENSOR_TYPE val) {
   }
 }
 
-class DexcomBinarySensor : public Component, public binary_sensor::BinarySensor, public Parented<DexcomBLEClient> {
+class DexcomBinarySensor : public Component, public binary_sensor::BinarySensor {
  public:
+  explicit DexcomBinarySensor(DexcomBLEClient *parent);
   void dump_config() override;
-  void setup() override;
 
   void set_type(DEXCOM_BINARY_SENSOR_TYPE val) { this->type_ = val; }
 

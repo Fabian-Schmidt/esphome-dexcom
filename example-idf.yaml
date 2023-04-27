@@ -23,6 +23,8 @@ logger:
   # level: DEBUG
   level: INFO
 
+deep_sleep:
+
 esp32_ble_tracker:
   scan_parameters:
     interval: 10ms
@@ -34,7 +36,11 @@ dexcom_ble_client:
   transmitter_id: ${transmitter_id}
   use_alternative_bt_channel: ${use_alternative_bt_channel}
   # mac_address: ${mac_address}
-  # on_disconnect:
+  on_disconnect: 
+    - deep_sleep.enter:
+        # Every 5 minutes Dexcom sensor wakes up.
+        # Pre wake up connect to WiFi and MQTT.
+        sleep_duration: 4.5min
 
 sensor:
   - platform: dexcom_ble_client

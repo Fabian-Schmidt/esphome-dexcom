@@ -11,20 +11,19 @@ void DexcomTextSensor::dump_config() {
   ESP_LOGCONFIG(TAG, "  Type '%s'", enum_to_c_str(this->type_));
 }
 
-void DexcomTextSensor::setup() {
-  this->parent_->add_on_message_callback(
-      [this](const TIME_RESPONSE_MSG *time_msg, const GLUCOSE_RESPONSE_MSG *glucose_msg) {
-        switch (this->type_) {
-          case DEXCOM_TEXT_SENSOR_TYPE::STATUS:
-            this->publish_state(enum_to_c_str(glucose_msg->status));
-            break;
-          case DEXCOM_TEXT_SENSOR_TYPE::CALIBRATION_STATE:
-            this->publish_state(enum_to_c_str(glucose_msg->state));
-            break;
-          default:
-            break;
-        }
-      });
+DexcomTextSensor::DexcomTextSensor(DexcomBLEClient *parent) {
+  parent->add_on_message_callback([this](const TIME_RESPONSE_MSG *time_msg, const GLUCOSE_RESPONSE_MSG *glucose_msg) {
+    switch (this->type_) {
+      case DEXCOM_TEXT_SENSOR_TYPE::STATUS:
+        this->publish_state(enum_to_c_str(glucose_msg->status));
+        break;
+      case DEXCOM_TEXT_SENSOR_TYPE::CALIBRATION_STATE:
+        this->publish_state(enum_to_c_str(glucose_msg->state));
+        break;
+      default:
+        break;
+    }
+  });
 }
 
 }  // namespace dexcom_ble_client

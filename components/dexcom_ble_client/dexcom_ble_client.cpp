@@ -22,8 +22,9 @@ void DexcomBLEClient::dump_config() {
   ESP_LOGCONFIG(TAG, "  Transmitter name: %s", this->transmitter_name_.c_str());
   ESP_LOGCONFIG(TAG, "  Transmitter model: %s", enum_to_c_str(this->transmitter_model));
   ESP_LOGCONFIG(TAG, "  Use Alternative BT Channel: %s", YESNO(this->use_alternative_bt_channel_));
-  if (this->address_ != 0)
+  if (this->address_ != 0) {
     ESP_LOGCONFIG(TAG, "  Address: %s", this->address_str().c_str());
+  }
 }
 
 bool DexcomBLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -472,7 +473,7 @@ bool DexcomBLEClient::read_handle_(const uint16_t handle) {
 }
 
 std::array<uint8_t, 8> DexcomBLEClient::encrypt_(const std::array<uint8_t, 8> data) {
-  std::array<uint8_t, 8> ret;
+  std::array<uint8_t, 8> ret{};
 
   esp_aes_context ctx;
   esp_aes_init(&ctx);
