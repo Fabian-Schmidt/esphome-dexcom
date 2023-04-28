@@ -35,11 +35,10 @@ dexcom_ble_client:
   id: dexcom_ble_client_id
   transmitter_id: ${transmitter_id}
   use_alternative_bt_channel: ${use_alternative_bt_channel}
-  # mac_address: ${mac_address}
   on_disconnect: 
     - deep_sleep.enter:
         # Every 5 minutes Dexcom sensor wakes up.
-        # Pre wake up connect to WiFi and MQTT.
+        # Pre wake up connect to WiFi, API, MQTT etc.
         sleep_duration: 4.5min
 
 sensor:
